@@ -2,9 +2,6 @@ import argparse
 import socket
 import sys
 
-from util import packet_parse
-
-# from util import packet_parse
 """
 Simple example pokerbot, written in python.
 
@@ -17,10 +14,6 @@ class Player:
         # Get a file-object for reading packets from the socket.
         # Using this ensures that you get exactly one packet per read.
         f_in = input_socket.makefile()
-        opponent_1_name = ""
-        opponent_2_name = ""
-        my_hand = ""
-
         while True:
             # Block until the engine sends us a packet.
             data = f_in.readline().strip()
@@ -39,25 +32,10 @@ class Player:
             # illegal action.
             # When sending responses, terminate each response with a newline
             # character (\n) or your bot will hang!
-            received_packet = packet_parse.parse_given_packet(data)
-
-            if received_packet['packet_name'] == "NEWGAME":
-                opponent_1_name = received_packet['opponent_1_name']
-                opponent_2_name = received_packet['opponent_2_name']
-
-            elif received_packet['packet_name'] == "NEWHAND":
-                my_hand = received_packet['hand']
-                my_seat = received_packet['seat']
-                list_of_stacksizes = received_packet['stack_size']
-                my_stacksize = list_of_stacksizes[my_seat - 1]
-                hand_id = received_packet['handID']
-                num_active_players = received_packet['num_active_players']
-                list_of_active_players = received_packet['active_players']
-
-            elif received_packet['packet_name'] == "GETACTION":
+            word = data.split()[0]
+            if word == "GETACTION":
                 # Currently CHECK on every move. You'll want to change this.
                 s.send("CHECK\n")
-
             elif word == "REQUESTKEYVALUES":
                 # At the end, the engine will allow your bot save key/value pairs.
                 # Send FINISH to indicate you're done.
