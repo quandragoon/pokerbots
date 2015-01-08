@@ -91,7 +91,7 @@ def parse_handover(data):
 	parsed_dict['timeBank'] = float(data.split()[len(data.split()) - 1])
 	return parsed_dict
 
-def parse_packet(data):
+def parse_given_packet(data):
 	packet_type = data.split()[0]
 	if packet_type == "NEWGAME":
 		return parse_newgame(data)
