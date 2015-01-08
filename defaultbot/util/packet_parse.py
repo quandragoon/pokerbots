@@ -30,15 +30,15 @@ def parse_getaction(data): #<<<<<< Most important Packet.
 	parsed_dict['packet_name'] = data.split()[0]
 	parsed_dict['potsize'] = int(data.split()[1])
 	parsed_dict['num_boardcards'] = int(data.split()[2])
-	total_boarcards = int(data.split()[2])
+
 	#Adding cards on the board to the hash table
 	boardcards = []
 	count = 1
-	while count <= total_boarcards:
+	while count <= parsed_dict['num_boardcards']:
 		boardcards.append(data.split()[2 + count])
 		count += 1
 	parsed_dict['boardcards'] = boardcards
-	index_board = 2 + total_boarcards
+	index_board = 2 + parsed_dict['num_boardcards']
 	
 	#parsing stack sizes for each player 
 	parsed_dict['stack_size'] = [data.split()[index_board + 1], data.split()[index_board + 2], data.split()[index_board + 3]]
@@ -47,6 +47,7 @@ def parse_getaction(data): #<<<<<< Most important Packet.
 	parsed_dict['active_players'] = [data.split()[index_stackSize + 2], data.split()[index_stackSize + 3], data.split()[index_stackSize + 4]]
 	parsed_dict['num_last_action'] = int(data.split()[index_stackSize + 5])
 	
+	#Parsing last action
 	index_last_action = index_stackSize + 5
 	last_action_list = []
 	count = 1
@@ -55,6 +56,7 @@ def parse_getaction(data): #<<<<<< Most important Packet.
 		count += 1 
 	parsed_dict['last_action'] = last_action_list
 
+	#Parsing legal actions
 	index_legal_action = index_last_action + parsed_dict['num_last_action']
 	parsed_dict['num_legal_actions'] = int(data.split()[index_legal_action + 1])
 	legal_actions_list = []
@@ -63,13 +65,47 @@ def parse_getaction(data): #<<<<<< Most important Packet.
 		legal_actions_list.append(data.split()[count + index_legal_action + 1])
 		count += 1
 	parsed_dict['legal_actions'] = legal_actions_list
+	
+	parsed_dict['timeBank'] = float(data.split()[len(data.split()) - 1])
+	return parsed_dict
+
+def parse_handover(data):
+	parsed_dict = {}
+	parsed_dict['packet_name'] = data.split()[0]
+	parsed_dict['stack_size'] = [data.split()[1], data.split()[2], data.split()[3]]
+	parsed_dict['num_boardcards'] = data.split()[4]
+	boardcards = []
+	count = 1
+	while count <= parsed_dict['num_boardcards']:
+		boardcards.append(data.split()[4 + count])
+		count += 1
+	parsed_dict['boardcards'] = boardcards
+	index_board = 4 + parsed_dict['num_boardcards']
+	parsed_dict['num_last_action'] = data.split()[index_board + 1]
+	last_action_list = []
+	count = 1
+	while count <= parsed_dict['num_last_action']:
+		last_action_list.append(data.split()[count + index_board + 1])
+		count += 1
+	parsed_dict['last_action'] = last_action_list
 	parsed_dict['timeBank'] = float(data.split()[len(data.split()) - 1])
 	return parsed_dict
 
 def parse_packet(data):
-	parsed_map = {}
 	packet_type = data.split()[0]
 	if packet_type == "NEWGAME":
-		parsed_map = parse_newgame(data)
+		return parse_newgame(data)
 
-	return parsed_map
+	elif packet_type == "NEWHAND":
+		return parse_newhand(data)
+
+	elif packet_type == "GETACTION":
+		return parse_getaction(data)
+
+	elif packet_type == "HANDOVER":
+		return parse_handover(data)
+
+	else:
+		parsed_dict = {}
+		parsed_dict['packet_name'] = data.split()[0]
+		return parsed_dict	
