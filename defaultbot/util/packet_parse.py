@@ -19,10 +19,11 @@ def parse_newhand(data):
 	parsed_dict['handID'] = int(data.split()[1])
 	parsed_dict['seat'] = int(data.split()[2])
 	parsed_dict['hand'] = data.split()[3] + data.split()[4]
-	parsed_dict['stack_size'] = [int(data.split()[5]), int(data.split()[6]), int(data.split()[7])]	
-	parsed_dict['num_active_players'] = int(data.split()[8])
-	parsed_dict['active_players'] = [data.split()[9], data.split()[10], data.split()[11]]
-	parsed_dict['timeBank'] = float(data.split()[12])
+	parsed_dict['stack_size'] = [int(data.split()[5]), int(data.split()[6]), int(data.split()[7])]
+	parsed_dict['player_names'] = [data.split()[8], data.split()[9], data.split()[10]]	
+	parsed_dict['num_active_players'] = int(data.split()[11])
+	parsed_dict['active_players'] = [data.split()[12], data.split()[13], data.split()[14]]
+	parsed_dict['timeBank'] = float(data.split()[15])
 	return parsed_dict
 
 def parse_getaction(data): #<<<<<< Most important Packet.
