@@ -1,7 +1,7 @@
 import argparse
 import socket
 import sys
-import pbots_calc
+# import pbots_calc
 
 from util import packet_parse
 """
@@ -39,12 +39,15 @@ class Player:
 
         opponent_1_name = ""
         opponent_2_name = ""
+        hasPlayed_opponent_1 = False
+        hasPlayed_opponent_2 = False
         my_hand = ""
         my_stacksize = 0
         list_of_stacksizes = []
         hand_id = 0
         num_active_players = 0
         list_of_active_players = []
+        history_storage = {}
 
         while True:
             # Block until the engine sends us a packet.
@@ -58,17 +61,33 @@ class Player:
             # the engine and act on it. We are just printing it instead.
             received_packet = packet_parse.parse_given_packet(data)
 
-            # print received_packet
-
             # When appropriate, reply to the engine with a legal action.
             # The engine will ignore all spurious responses.
             # The engine will also check/fold for you if you return an
             # illegal action.
             # When sending responses, terminate each response with a newline
             # character (\n) or your bot will hang!            
+
+            print data
+            
+            if received_packet['packet_name'] == "KEYVALUE":
+                history_storage[received_packet['key']] = received_packet['value']
+
             if received_packet['packet_name'] == "NEWGAME":
                 opponent_1_name = received_packet['opponent_1_name']
                 opponent_2_name = received_packet['opponent_2_name']
+
+                # If we have already played the opponent before, 
+                # we load their statistics from the previous encounter
+                # for this game. NOTE that Historian is just an instance of the Statistician/Historian class
+                # that is not yet created. 
+                if opponent_1_name in history_storage:
+                    hasPlayed_opponent_1 = True
+                    #Historian.updateOpponentStatistics(history_storage[opponent_1_name])
+
+                if opponent_2_name in history_storage:
+                    hasPlayed_opponent_2 = True
+                    #Historian.updateOpponentStatistics(history_storage[opponent_1_name])
 
             elif received_packet['packet_name'] == "NEWHAND":
                 my_hand = received_packet['hand']
@@ -86,7 +105,7 @@ class Player:
                     split_action = action.split(":")
 
                     # if split_action[0] == "BET" or split_action[0] == "RAISE":
-                        
+
                 #Compute the minimum and maximum possible bets that we can make
                 minBet = 0
                 maxBet = 0
@@ -98,14 +117,13 @@ class Player:
                         minBet = int(split_action[1])
                         maxBet = int(split_action[2])
 
-                print "Minimum possible bet is: " + str(minBet)
-                print "Maximum possible bet is: " + str(maxBet)
-
                 s.send("CHECK\n")
 
             elif received_packet['packet_name'] == "REQUESTKEYVALUES":
                 # At the end, the engine will allow your bot save key/value pairs.
                 # Send FINISH to indicate you're done.
+                # s.send("PUT quan sucks\n")
+                # s.send("PUT samarth best\n")
                 s.send("FINISH\n")
         # Clean up the socket.
         s.close()
