@@ -31,23 +31,28 @@ class Player:
         self.num_active_players = 0
         self.list_of_active_players = []
         self.history_storage = {}
+        self.minBet = 0
+        self.maxBet = 0
+        self.minRaise = 0
+        self.maxRaise = 0
 
-    def makeBet(action, amount, maxBet, minBet, socket):
+    def makeBet(self, minBet, maxBet):
+        return max(minBet, min(random.random()*my_stacksize, maxBet))
 
-        if action == RAISE or action == BET:
-            playerBet = 0
-            
-            if action == RAISE:
-                playerBet = min(maxBet, max(minBet, amount))
 
-            elif action == BET:
-                if amount >= minBet and amount <= maxBet:
-                    playerBet = amount
-            
-            socket.send(action + ':' + str(playerBet) + '\n')
+    def makeRaise(self, minRaise, maxRaise):
+        return max(minRaise, min(random.random()*my_stacksize, maxRaise))
 
+
+    def makeAction(self, action, amount, minBet, maxBet, minRaise, maxRaise):
+        if action == BET:
+            amount = self.makeBet(minBet, maxBet)
+            s.send(action + ':' + str(amount) + '\n')
+        elif action == RAISE:
+            amount = self.makeRaise(minRaise, maxRaise)
+            s.send(action + ':' + str(amount) + '\n')
         else:
-            socket.send(action + '\n')
+            s.send(action + '\n')
 
 
     def keyval_handler(self, received_packet):
@@ -64,7 +69,7 @@ class Player:
         # that is not yet created. 
         if self.opponent_1_name in self.history_storage:
             self.hasPlayed_opponent_1 = True
-            #Historian.updateOpponentStatistics(history_storage[opponent_1_name])
+            # Historian.updateOpponentStatistics(history_storage[opponent_1_name])
 
         if self.opponent_2_name in self.history_storage:
             self.hasPlayed_opponent_2 = True
@@ -88,17 +93,19 @@ class Player:
             # if split_action[0] == BET or split_action[0] == RAISE:
 
         #Compute the minimum and maximum possible bets that we can make
-        minBet = 0
-        maxBet = 0
         
         for response in received_packet['legal_actions']:
             split_action = response.split(":")
 
             if split_action[0] == BET or split_action[0] == RAISE:
-                minBet = int(split_action[1])
-                maxBet = int(split_action[2])
+                self.minBet = int(split_action[1])
+                self.maxBet = int(split_action[2])
 
-        s.send("CHECK\n")    
+                s.send(split_action[0]+":"+str(self.maxBet) + "\n")  
+
+        # TODO: handle all commands 
+
+        s.send("CHECK\n")  
 
     def requestkeyvalue_handler(self, received_packet):
         # At the end, the engine will allow your bot save key/value pairs.
