@@ -50,6 +50,64 @@ class Player:
             socket.send(action + '\n')
 
 
+    def keyval_handler(self, received_packet):
+        self.history_storage[received_packet['key']] = received_packet['value']
+
+
+    def newgame_handler(self, received_packet):
+        self.opponent_1_name = received_packet['opponent_1_name']
+        self.opponent_2_name = received_packet['opponent_2_name']
+
+        # If we have already played the opponent before, 
+        # we load their statistics from the previous encounter
+        # for this game. NOTE that Historian is just an instance of the Statistician/Historian class
+        # that is not yet created. 
+        if self.opponent_1_name in self.history_storage:
+            self.hasPlayed_opponent_1 = True
+            #Historian.updateOpponentStatistics(history_storage[opponent_1_name])
+
+        if self.opponent_2_name in self.history_storage:
+            self.hasPlayed_opponent_2 = True
+            #Historian.updateOpponentStatistics(history_storage[opponent_2_name])
+
+    def newhand_handler(self, received_packet):
+        self.my_hand = received_packet['hand']
+        my_seat = received_packet['seat']
+        self.list_of_stacksizes = received_packet['stack_size']
+        self.my_stacksize = self.list_of_stacksizes[my_seat - 1]
+        self.hand_id = received_packet['handID']
+        self.num_active_players = received_packet['num_active_players']
+        self.list_of_active_players = received_packet['active_players']
+
+    def getaction_handler(self, received_packet):
+        # hand_equity = 
+
+        for action in received_packet['last_action']:
+            split_action = action.split(":")
+
+            # if split_action[0] == BET or split_action[0] == RAISE:
+
+        #Compute the minimum and maximum possible bets that we can make
+        minBet = 0
+        maxBet = 0
+        
+        for response in received_packet['legal_actions']:
+            split_action = response.split(":")
+
+            if split_action[0] == BET or split_action[0] == RAISE:
+                minBet = int(split_action[1])
+                maxBet = int(split_action[2])
+
+        s.send("CHECK\n")    
+
+    def requestkeyvalue_handler(self, received_packet):
+        # At the end, the engine will allow your bot save key/value pairs.
+        # Send FINISH to indicate you're done.
+        # s.send("PUT quan sucks\n")
+        # s.send("PUT samarth best\n")
+        s.send("FINISH\n")
+
+
     def run(self, input_socket):
         # Get a file-object for reading packets from the socket.
         # Using this ensures that you get exactly one packet per read.
@@ -79,60 +137,20 @@ class Player:
             print data
             
             if received_packet['packet_name'] == "KEYVALUE":
-                self.history_storage[received_packet['key']] = received_packet['value']
+                self.keyval_handler(received_packet)
 
-            if received_packet['packet_name'] == "NEWGAME":
-                self.opponent_1_name = received_packet['opponent_1_name']
-                self.opponent_2_name = received_packet['opponent_2_name']
-
-                # If we have already played the opponent before, 
-                # we load their statistics from the previous encounter
-                # for this game. NOTE that Historian is just an instance of the Statistician/Historian class
-                # that is not yet created. 
-                if self.opponent_1_name in history_storage:
-                    self.hasPlayed_opponent_1 = True
-                    #Historian.updateOpponentStatistics(history_storage[opponent_1_name])
-
-                if self.opponent_2_name in history_storage:
-                    self.hasPlayed_opponent_2 = True
-                    #Historian.updateOpponentStatistics(history_storage[opponent_2_name])
+            elif received_packet['packet_name'] == "NEWGAME":
+                self.newgame_handler(received_packet)
 
             elif received_packet['packet_name'] == "NEWHAND":
-                self.my_hand = received_packet['hand']
-                my_seat = received_packet['seat']
-                self.list_of_stacksizes = received_packet['stack_size']
-                self.my_stacksize = list_of_stacksizes[my_seat - 1]
-                self.hand_id = received_packet['handID']
-                self.num_active_players = received_packet['num_active_players']
-                self.list_of_active_players = received_packet['active_players']
+                self.newhand_handler(received_packet)
 
             elif received_packet['packet_name'] == "GETACTION":
-                # hand_equity = 
-
-                for action in received_packet['last_action']:
-                    split_action = action.split(":")
-
-                    # if split_action[0] == BET or split_action[0] == RAISE:
-
-                #Compute the minimum and maximum possible bets that we can make
-                minBet = 0
-                maxBet = 0
-                
-                for response in received_packet['legal_actions']:
-                    split_action = response.split(":")
-
-                    if split_action[0] == BET or split_action[0] == RAISE:
-                        minBet = int(split_action[1])
-                        maxBet = int(split_action[2])
-
-                s.send("CHECK\n")
+                self.getaction_handler(received_packet)
 
             elif received_packet['packet_name'] == "REQUESTKEYVALUES":
-                # At the end, the engine will allow your bot save key/value pairs.
-                # Send FINISH to indicate you're done.
-                # s.send("PUT quan sucks\n")
-                # s.send("PUT samarth best\n")
-                s.send("FINISH\n")
+                self.requestkeyvalue_handler(received_packet)
+
         # Clean up the socket.
 
         s.close()
