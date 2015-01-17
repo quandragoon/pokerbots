@@ -97,15 +97,15 @@ def parse_handover(data):
 
 def parse_keyvalue(data):
 	parsed_dict = {}
-	parsed_dict['packet_name'] == data.split()[0]
-	parsed_dict['key'] == data.split()[1]
-	parsed_dict['value'] == data.split()[2]
+	parsed_dict['packet_name'] = data.split()[0]
+	parsed_dict['key'] = data.split()[1]
+	parsed_dict['value'] = data.split()[2]
 	return parsed_dict
 
 def parse_request_keyvalue(data):
 	parsed_dict = {}
-	parsed_dict['packet_name'] == data.split()[0]
-	parsed_dict['bytesLeft'] == data.split()[1]
+	parsed_dict['packet_name'] = data.split()[0]
+	parsed_dict['bytesLeft'] = data.split()[1]
 	return parsed_dict
 
 def parse_given_packet(data):
