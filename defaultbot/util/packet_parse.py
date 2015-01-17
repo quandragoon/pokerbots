@@ -95,6 +95,19 @@ def parse_handover(data):
 	parsed_dict['timeBank'] = float(data.split()[len(data.split()) - 1])
 	return parsed_dict
 
+def parse_keyvalue(data):
+	parsed_dict = {}
+	parsed_dict['packet_name'] == data.split()[0]
+	parsed_dict['key'] == data.split()[1]
+	parsed_dict['value'] == data.split()[2]
+	return parsed_dict
+
+def parse_request_keyvalue(data):
+	parsed_dict = {}
+	parsed_dict['packet_name'] == data.split()[0]
+	parsed_dict['bytesLeft'] == data.split()[1]
+	return parsed_dict
+
 def parse_given_packet(data):
 	packet_type = data.split()[0]
 	if packet_type == "NEWGAME":
@@ -108,6 +121,12 @@ def parse_given_packet(data):
 
 	elif packet_type == "HANDOVER":
 		return parse_handover(data)
+
+	elif packet_type == "KEYVALUE":
+		return parse_keyvalue(data)
+
+	elif packet_type == "REQUESTKEYVALUES":
+		return parse_request_keyvalue(data)
 
 	else:
 		parsed_dict = {}

@@ -13,7 +13,6 @@ It is meant as an example of how a pokerbot should communicate with the engine.
 """
 
 class Player:
-    lastRaised = 0
 
     def makeBet(action, amount, maxBet, minBet, socket):
 
@@ -21,8 +20,7 @@ class Player:
             playerBet = 0
             
             if action == "RAISE":
-                amount += lastRaised
-                playerBet = min(maxBet, max(minBet, amountRaised))
+                playerBet = min(maxBet, max(minBet, amount))
 
             elif action == "BET":
                 if amount >= minBet and amount <= maxBet:
@@ -87,10 +85,8 @@ class Player:
                 for action in received_packet['last_action']:
                     split_action = action.split(":")
 
-                    if split_action[0] == "BET" or split_action[0] == "RAISE":
-                        lastRaised = split_action[1]
-
-                
+                    # if split_action[0] == "BET" or split_action[0] == "RAISE":
+                        
                 #Compute the minimum and maximum possible bets that we can make
                 minBet = 0
                 maxBet = 0
