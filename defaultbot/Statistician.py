@@ -11,6 +11,9 @@ CHECK = "CHECK"
 BET = "BET"
 
 SHOW = "SHOW"
+FLOP = "FLOP"
+TURN = "TURN"
+RIVER = "RIVER"
 
 class Statistician:
 
@@ -21,13 +24,14 @@ class Statistician:
 		self.winCount = {self.opp1_name : 0, self.opp2_name : 0}
 		# Measure to see if they only play good hands
 		self.instantFold = {self.opp1_name : 0, self.opp2_name : 0}
-		self.myRaiseCount = {self.opp1_name : 0, self.opp2_name : 0}
+		self.myRaiseCount = 0
 		# Pre-Flop Raise Count of the opponents
 		self.pfrCount = {self.opp1_name : 0, self.opp2_name : 0}
 		self.threeBCount = {self.opp1_name : 0, self.opp2_name : 0}
 		self.twoBCount = {self.opp1_name : 0, self.opp2_name : 0}
 		self.pfrFoldCount = {self.opp1_name : 0, self.opp2_name : 0}
 		self.callRaiseCount = {self.opp1_name : 0, self.opp2_name : 0}
+		self.pfrBoolean = {self.opp1_name: False, self.opp2_name: False}
 
 		# Post-Flop statistics below
 		self.checkRaise = {self.opp1_name : 0, self.opp2_name : 0}
@@ -52,33 +56,57 @@ class Statistician:
 		self.winCount = opponent_stats['winCount']
 		self.pfrCount = opponent_stats['pfrCount']
 
-	def processPreflopStatistics(self, opponent_name, hand_statistics):
+	def processPreflopStatistics(self, opponent_names, hand_statistics):
 		for last_action in hand_statistics:
 			split_action = last_action.split(":")
 
-			if split_action[-1] == opponent_name:
+			if split_action[-1] in opponent_names:
+				opponent_name = split_action[-1]
+
 				if split_action[0] == RAISE 
 					self.pfrCount[opponent_name] += 1
+					self.pfrBoolean[opponent_name] = True
 
 				elif split_action[0] == CALL and self.myRaiseCount > 0:
 					self.callRaiseCount[opponent_name] += 1
 			
 			else:
 				if split_action[0] == RAISE:
-					self.myRaiseCount[opponent_name] += 1
+					self.myRaiseCount += 1
 
-		if self.myRaiseCount[opponent_name] > 0 and self.pfrCount[opponent_name] > 0:
-			self.threeBCount[opponent_name] += 1 
+		for opp_name in opponent_names:
+			if self.myRaiseCount > 0 and self.pfrCount[opp_name] > 0:
+				self.threeBCount[opp_name] += 1 
 
-		elif self.myRaiseCount[opponent_name] == 1 and self.pfrCount[opponent_name] == 0:
-			self.twoBCount[opponent_name] += 1
+			elif self.myRaiseCount == 1 and self.pfrCount[opp_name] == 0:
+				self.twoBCount[opp_name] += 1
 
-		elif self.myRaiseCount[opponent_name] > 0 and self.callRaiseCount[opponent_name] < self.myRaiseCount:
-			self.pfrFoldCount[opponent_name] += 1
+			elif self.myRaiseCount > 0 and self.callRaiseCount[opp_name] < self.myRaiseCount:
+				self.pfrFoldCount[opp_name] += 1
 
-	def processPostFlopStatistics(self, opponent_name, hand_statistics):
-		pass
+	def processPostFlopStatistics(self, opponent_names, hand_statistics, board_state):
+		for last_action in hand_statistics:
+			split_action = last_action.split(":")
 
+			if split_action[-1] in opponent_names:
+				opponent_name = split_action[-1]
+
+				if split_action[0] == CHECK:
+					self.checkCount[opponent_name] += 1
+
+				elif split_action[0] == RAISE:
+					if self.pfrBoolean[opponent_name] and board_state == FLOP:
+						self.cbCount[opponent_name] += 1
+					self.raiseCountPost[opponent_name] += 1
+
+				elif split_action[0] == CALL:
+					self.callCountPost[opponent_name] += 1 
+
+				elif split_action[0] == BET:
+					self.betCountPost[opponent_name] += 1
+
+				else:
+					self.foldCount[opponent_name] += 1					
 
 	# Update opponent statistics after each hand
 	def updateOpponentStatistics(self, received_packet):
@@ -88,12 +116,18 @@ class Statistician:
 		if received_packet['packet_name'] == "GETACTION":
 
 			if received_packet['num_boardcards'] == 0:
-				self.processPreflopStatistics(self.opp1_name, received_packet['last_action'])
-				self.processPreflopStatistics(self.opp2_name, received_packet['last_action'])
+				self.processPreflopStatistics([self.opp1_name, self.opp2_name], received_packet['last_action'])
 
 			else:
-				self.processPostFlopStatistics(self.opp1_name, received_packet['last_action'])
-				self.processPostFlopStatistics(self.opp2_name, received_packet['last_action'])
+				state = ""
+				if received_packet['num_boardcards'] == 3:
+					state = FLOP
+				elif received_packet['num_boardcards'] == 4:
+					state = TURN
+				else:
+					state =  RIVER
+
+				self.processPostFlopStatistics([self.opp1_name, self.opp2_name], received_packet['last_action'], state)
 
 		#HANDOVER
 		else:
