@@ -1,7 +1,8 @@
 import argparse
 import socket
 import sys
-# import pbots_calc
+import pbots_calc
+import random
 
 from util import packet_parse
 """
@@ -14,45 +15,60 @@ It is meant as an example of how a pokerbot should communicate with the engine.
 
 # Actions
 RAISE = "RAISE"
-BET = "BET"
-FOLD = "FOLD"
+BET   = "BET"
+FOLD  = "FOLD"
+CALL  = "CALL"
+CHECK = "CHECK"
+
+FOLD_THRES = 0.3
+POWER = 4
+
+
+
+ITER_TABLE = {0 : 100000, 3:10000, 4:1000, 5:100}
+
+# print pbots_calc.calc("AhKh:xx", "ThJhQh2s7s", "", 1)
+# print pbots_calc.calc("AhKh:xx:xx", "JhQh2s7s", "", 100)
 
 class Player:
 
     def __init__ (self):
-        self.opponent_1_name = ""
-        self.opponent_2_name = ""
-        self.hasPlayed_opponent_1 = False
-        self.hasPlayed_opponent_2 = False
-        self.my_hand = ""
-        self.my_stacksize = 0
-        self.list_of_stacksizes = []
-        self.hand_id = 0
-        self.num_active_players = 0
+        self.opponent_1_name        = ""
+        self.opponent_2_name        = ""
+        self.hasPlayed_opponent_1   = False
+        self.hasPlayed_opponent_2   = False
+        self.my_hand                = ""
+        self.my_stacksize           = 0
+        self.list_of_stacksizes     = []
+        self.hand_id                = 0
+        self.num_active_players     = 0
         self.list_of_active_players = []
-        self.history_storage = {}
-        self.minBet = 0
-        self.maxBet = 0
-        self.minRaise = 0
-        self.maxRaise = 0
-
-    def makeBet(self, minBet, maxBet):
-        return max(minBet, min(random.random()*my_stacksize, maxBet))
-
-
-    def makeRaise(self, minRaise, maxRaise):
-        return max(minRaise, min(random.random()*my_stacksize, maxRaise))
+        self.history_storage        = {}
+        self.minBet                 = 0
+        self.maxBet                 = 0
+        self.minRaise               = 0
+        self.maxRaise               = 0
+        self.my_original_stacksize  = 0
+        self.alpha                  = 0.5 # how agressive we are
 
 
-    def makeAction(self, action, amount, minBet, maxBet, minRaise, maxRaise):
-        if action == BET:
-            amount = self.makeBet(minBet, maxBet)
-            s.send(action + ':' + str(amount) + '\n')
-        elif action == RAISE:
-            amount = self.makeRaise(minRaise, maxRaise)
-            s.send(action + ':' + str(amount) + '\n')
-        else:
-            s.send(action + '\n')
+    def makeBet(self, amount):
+        return int(max(self.minBet, min(amount, self.maxBet)))
+
+
+    def makeRaise(self, amount):
+        return int(max(self.minRaise, min(amount, self.maxRaise)))
+
+
+    # def makeAction(self, action, amount, minBet, maxBet, minRaise, maxRaise):
+    #     if action == BET:
+    #         amount = self.makeBet(minBet, maxBet)
+    #         s.send(action + ':' + str(amount) + '\n')
+    #     elif action == RAISE:
+    #         amount = self.makeRaise(minRaise, maxRaise)
+    #         s.send(action + ':' + str(amount) + '\n')
+    #     else:
+    #         s.send(action + '\n')
 
 
     def keyval_handler(self, received_packet):
@@ -79,33 +95,110 @@ class Player:
         self.my_hand = received_packet['hand']
         my_seat = received_packet['seat']
         self.list_of_stacksizes = received_packet['stack_size']
-        self.my_stacksize = self.list_of_stacksizes[my_seat - 1]
+        self.my_original_stacksize = self.list_of_stacksizes[my_seat - 1]
         self.hand_id = received_packet['handID']
         self.num_active_players = received_packet['num_active_players']
         self.list_of_active_players = received_packet['active_players']
 
+
+    def bet_handler(self, winning_factor):
+        a = random.random()
+        bet_amount = 0
+
+        if self.alpha > a: # YOLO
+            r = random.random()
+            if winning_factor > r:
+                bet_amount = self.my_stacksize 
+
+        else: # EBOLO
+            bet_amount = self.my_stacksize * winning_factor  
+
+        return self.makeBet(bet_amount)
+        # s.send(BET + ':' + str(self.makeBet(bet_amount)) + '\n')
+
+
+    def raise_handler(self, winning_factor):
+        a = random.random()
+        raise_amount = 0
+
+        if self.alpha > a: # YOLO
+            r = random.random()
+            if winning_factor > r:
+                raise_amount = self.my_stacksize 
+
+        else: # EBOLO
+            raise_amount = self.my_stacksize * winning_factor  
+
+        return self.makeRaise(raise_amount)
+        # s.send(RAISE + ':' + str(self.makeRaise(raise_amount)) + '\n')
+
+
+    def get_best_action(self, received_packet, avail_actions = []):
+        equity = None
+        if received_packet['num_active_players'] == 3:
+            equity = pbots_calc.calc(':'.join([self.my_hand, 'xx', 'xx']), ''.join(received_packet['boardcards']), 
+                "", ITER_TABLE[received_packet['num_boardcards']])
+        else:
+            equity = pbots_calc.calc(':'.join([self.my_hand, 'xx']), ''.join(received_packet['boardcards']), 
+                "", ITER_TABLE[received_packet['num_boardcards']])
+
+        equity = equity.ev[0]
+        if equity < FOLD_THRES:
+            if CHECK in avail_actions:
+                return CHECK
+            return FOLD
+
+        else: 
+            winning_factor = ((equity - FOLD_THRES) / (1 - FOLD_THRES))**POWER
+            if BET in avail_actions:
+                amount = self.bet_handler(winning_factor)
+                return BET + ":" + str(amount)
+            elif RAISE in avail_actions:
+                amount = self.raise_handler(winning_factor)
+                return RAISE + ":" + str(amount)
+
+        return CHECK
+
     def getaction_handler(self, received_packet):
         # hand_equity = 
 
-        for action in received_packet['last_action']:
+        # for action in received_packet['last_action']:
+        #     split_action = action.split(":")
+
+        for action in received_packet['legal_actions']:
             split_action = action.split(":")
 
-            # if split_action[0] == BET or split_action[0] == RAISE:
-
-        #Compute the minimum and maximum possible bets that we can make
-        
-        for response in received_packet['legal_actions']:
-            split_action = response.split(":")
-
-            if split_action[0] == BET or split_action[0] == RAISE:
+            if split_action[0] == BET:
                 self.minBet = int(split_action[1])
                 self.maxBet = int(split_action[2])
+            elif split_action[0] == RAISE:
+                self.minRaise = int(split_action[1])
+                self.maxRaise = int(split_action[2])
+        
+        avail_actions = [(e.split(":"))[0] for e in received_packet['legal_actions']]
+        action = self.get_best_action (received_packet, avail_actions)
+        s.send(action + "\n")
 
-                s.send(split_action[0]+":"+str(self.maxBet) + "\n")  
 
-        # TODO: handle all commands 
+        # for action in received_packet['legal_actions']:
+        #     split_action = action.split(":")
 
-        s.send("CHECK\n")  
+        #     if split_action[0] == BET:
+        #         made_bet = self.bet_handler()
+        #         if made_bet:
+        #             return
+        #     elif split_action[0] == RAISE:
+        #         made_raise = self.raise_handler()
+        #         if made_raise:
+        #             return
+        #     elif split_action[0] == CALL:
+
+            # if split_action[0] == BET or split_action[0] == RAISE:
+            #     self.minBet = int(split_action[1])
+            #     self.maxBet = int(split_action[2])
+
+            #     s.send(split_action[0]+":"+str(self.maxBet) + "\n")  
+
 
     def requestkeyvalue_handler(self, received_packet):
         # At the end, the engine will allow your bot save key/value pairs.
