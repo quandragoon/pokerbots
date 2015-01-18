@@ -20,13 +20,13 @@ class Statistician:
 		self.winCount = {self.opp1_name : 0, self.opp2_name : 0}
 		# Measure to see if they only play good hands
 		self.instantFold = {self.opp1_name : 0, self.opp2_name : 0}
-		# Pre-Flop Raise Count
+		self.myRaiseCount = 0
+		# Pre-Flop Raise Count of the opponents
 		self.pfrCount = {self.opp1_name : 0, self.opp2_name : 0}
 		self.threeBCount = {self.opp1_name : 0, self.opp2_name : 0}
+		self.twoBCount = {self.opp1_name : 0, self.opp2_name : 0}
 		self.pfrFoldCount = {self.opp1_name : 0, self.opp2_name : 0}
-		self.bet3FoldCount = {self.opp1_name : 0, self.opp2_name : 0}
 		self.callRaiseCount = {self.opp1_name : 0, self.opp2_name : 0}
-		self.myRaiseCount = 0
 
 		# Post-Flop statistics below
 		self.aggressionFactor = {self.opp1_name : 0, self.opp2_name : 0}
@@ -56,18 +56,25 @@ class Statistician:
 		for last_action in hand_statistics:
 			split_action = last_action.split(":")
 
-			if split_action[0] == RAISE and split_action[-1] == opponent_name:
-				self.pfrCount[opponent_name] += 1
+			if split_action[-1] == opponent_name:
+				if split_action[0] == RAISE 
+					self.pfrCount[opponent_name] += 1
 
-			elif split_action[0] == RAISE and split_action[-1] == self.player_name:
-				self.myRaiseCount += 1
+				elif split_action[0] == CALL and self.myRaiseCount > 0:
+					self.callRaiseCount[opponent_name] += 1
+			
+			else:
+				if split_action[0] == RAISE:
+					self.myRaiseCount += 1
 
-			elif split_action[0] == CALL and split_action[-1] == opponent_name and self.myRaiseCount > 0:
-				self.callRaiseCount[opponent_name] += 1
+		if self.myRaiseCount > 0 and self.pfrCount[opponent_name] > 0:
+			self.threeBCount[opponent_name] += 1 
 
-		if self.myRaiseCount > 0 and self.callRaiseCount < self.myRaiseCount:
-			self.pfrFoldCount += 1
+		elif self.myRaiseCount == 1 and self.pfrCount[opponent_name] == 0:
+			self.twoBCount[opponent_name] += 1
 
+		elif self.myRaiseCount > 0 and self.callRaiseCount[opponent_name] < self.myRaiseCount:
+			self.pfrFoldCount[opponent_name] += 1
 
 	def processPostFlopStatistics(self, opponent_name, hand_statistics):
 		pass
@@ -82,13 +89,15 @@ class Statistician:
 		if received_packet['packet_name'] == "GETACTION":
 
 			if received_packet['num_boardcards'] == 0:
-				self.processPreflopStatistics(received_packet['last_action'])
+				self.processPreflopStatistics(self.opp1_name, received_packet['last_action'])
+				self.processPreflopStatistics(self.opp2_name, received_packet['last_action'])
 
 			else:
-				self.processPostFlopStatistics(received_packet['last_action'])
+				self.processPostFlopStatistics(self.opp1_name, received_packet['last_action'])
+				self.processPostFlopStatistics(self.opp2_name, received_packet['last_action'])
 
-
-		else:
+		#HANDOVER
+		# else:
 
 
 
