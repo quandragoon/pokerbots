@@ -85,11 +85,11 @@ class Player:
         # that is not yet created. 
         if self.opponent_1_name in self.history_storage:
             self.hasPlayed_opponent_1 = True
-            # Historian.updateOpponentStatistics(history_storage[opponent_1_name])
+            # statistician.getOpponentStatistics(opponent_1_name, history_storage[opponent_1_name])
 
         if self.opponent_2_name in self.history_storage:
             self.hasPlayed_opponent_2 = True
-            #Historian.updateOpponentStatistics(history_storage[opponent_2_name])
+            #statistician.getOpponentStatistics(opponent_2_name, history_storage[opponent_2_name])
 
     def newhand_handler(self, received_packet):
         self.my_hand = received_packet['hand']

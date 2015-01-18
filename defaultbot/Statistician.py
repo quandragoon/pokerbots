@@ -10,17 +10,18 @@ FOLD = "FOLD"
 CHECK = "CHECK"
 BET = "BET"
 
+SHOW = "SHOW"
+
 class Statistician:
 
 	def __init__(self):
-		self.player_name = ""
 		self.opp1_name = ""
 		self.opp2_name = ""
 		self.numHandsPlayed = {self.opp1_name : 0, self.opp2_name : 0}
 		self.winCount = {self.opp1_name : 0, self.opp2_name : 0}
 		# Measure to see if they only play good hands
 		self.instantFold = {self.opp1_name : 0, self.opp2_name : 0}
-		self.myRaiseCount = 0
+		self.myRaiseCount = {self.opp1_name : 0, self.opp2_name : 0}
 		# Pre-Flop Raise Count of the opponents
 		self.pfrCount = {self.opp1_name : 0, self.opp2_name : 0}
 		self.threeBCount = {self.opp1_name : 0, self.opp2_name : 0}
@@ -29,13 +30,13 @@ class Statistician:
 		self.callRaiseCount = {self.opp1_name : 0, self.opp2_name : 0}
 
 		# Post-Flop statistics below
+		self.checkRaise = {self.opp1_name : 0, self.opp2_name : 0}
 		self.aggressionFactor = {self.opp1_name : 0, self.opp2_name : 0}
 		self.raiseCountPost = {self.opp1_name : 0, self.opp2_name : 0}
 		self.betCountPost = {self.opp1_name : 0, self.opp2_name : 0}
 		self.callCountPost = {self.opp1_name : 0, self.opp2_name : 0}
 		# How many times opp goes to showdown after the flop
 		self.showdownCount = {self.opp1_name : 0, self.opp2_name : 0}
-		self.seenFlopCount = {self.opp1_name : 0, self.opp2_name : 0}
 		# Continuation bet count
 		self.cbCount = {self.opp1_name : 0, self.opp2_name : 0}
 		# How often opponent makes another cont. bet after first one
@@ -48,7 +49,6 @@ class Statistician:
 	# opponent_name is the name of the opponent
 	# opponent_stats is a hash table containing the opponent's stats
 	def getOpponentStatistics(self, opponent_name, opponent_stats):
-		self.numHandsPlayed = opponent_stats['numHandsPlayed']
 		self.winCount = opponent_stats['winCount']
 		self.pfrCount = opponent_stats['pfrCount']
 
@@ -65,15 +65,15 @@ class Statistician:
 			
 			else:
 				if split_action[0] == RAISE:
-					self.myRaiseCount += 1
+					self.myRaiseCount[opponent_name] += 1
 
-		if self.myRaiseCount > 0 and self.pfrCount[opponent_name] > 0:
+		if self.myRaiseCount[opponent_name] > 0 and self.pfrCount[opponent_name] > 0:
 			self.threeBCount[opponent_name] += 1 
 
-		elif self.myRaiseCount == 1 and self.pfrCount[opponent_name] == 0:
+		elif self.myRaiseCount[opponent_name] == 1 and self.pfrCount[opponent_name] == 0:
 			self.twoBCount[opponent_name] += 1
 
-		elif self.myRaiseCount > 0 and self.callRaiseCount[opponent_name] < self.myRaiseCount:
+		elif self.myRaiseCount[opponent_name] > 0 and self.callRaiseCount[opponent_name] < self.myRaiseCount:
 			self.pfrFoldCount[opponent_name] += 1
 
 	def processPostFlopStatistics(self, opponent_name, hand_statistics):
@@ -82,7 +82,6 @@ class Statistician:
 
 	# Update opponent statistics after each hand
 	def updateOpponentStatistics(self, received_packet):
-		self.player_name = received_packet['player_name']
 		self.opp1_name = received_packet['opponent_1_name']
 		self.opp2_name = received_packet['opponent_2_name']
 
@@ -102,6 +101,13 @@ class Statistician:
 			hand_winner = winner_string.split(":")[-1]
 			if hand_winner == self.opp1_name or hand_winner == self.opp2_name:
 				self.winCount[hand_winner] += 1
+
+			#Compute showdown Count
+			for last_action in received_packet['last_action']:
+				last_action_split = last_action.split(":")
+				
+				if last_action_split[0] == SHOW:
+					self.showdownCount[last_action_split[-1]] += 1
 
 
 
