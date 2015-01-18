@@ -165,6 +165,8 @@ class Player:
         # for action in received_packet['last_action']:
         #     split_action = action.split(":")
 
+        # statistician.updateOpponentStatistics(received_packet)
+
         for action in received_packet['legal_actions']:
             split_action = action.split(":")
 
@@ -198,6 +200,12 @@ class Player:
             #     self.maxBet = int(split_action[2])
 
             #     s.send(split_action[0]+":"+str(self.maxBet) + "\n")  
+
+
+    def handover_handler(self, received_packet):
+        pass
+        # statistician.updateOpponentStatistics(received_packet)
+
 
 
     def requestkeyvalue_handler(self, received_packet):
@@ -247,6 +255,9 @@ class Player:
 
             elif received_packet['packet_name'] == "GETACTION":
                 self.getaction_handler(received_packet)
+
+            elif received_packet['packet_name'] == "HANDOVER":
+                self.handover_handler(received_packet)
 
             elif received_packet['packet_name'] == "REQUESTKEYVALUES":
                 self.requestkeyvalue_handler(received_packet)

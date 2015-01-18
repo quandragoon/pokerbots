@@ -41,7 +41,7 @@ class Statistician:
 		# How often opponent makes another cont. bet after first one
 		self.twocbCount = {self.opp1_name : 0, self.opp2_name : 0}
 		self.foldcbBets = {self.opp1_name : 0, self.opp2_name : 0}
-		self.fold2cbBets = {self.opp1_name : 0, self.opp2_name : 0}
+		# self.fold2cbBets = {self.opp1_name : 0, self.opp2_name : 0}
 		self.foldCount = {self.opp1_name : 0, self.opp2_name : 0}
 		self.checkCount = {self.opp1_name : 0, self.opp2_name : 0}
 
