@@ -97,7 +97,11 @@ class Statistician:
 				self.processPostFlopStatistics(self.opp2_name, received_packet['last_action'])
 
 		#HANDOVER
-		# else:
+		else:
+			winner_string = received_packet['last_action'][-1]
+			hand_winner = winner_string.split(":")[-1]
+			if hand_winner == self.opp1_name or hand_winner == self.opp2_name:
+				self.winCount[hand_winner] += 1
 
 
 
