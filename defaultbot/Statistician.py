@@ -20,10 +20,8 @@ class Statistician:
 	def __init__(self):
 		self.opp1_name = ""
 		self.opp2_name = ""
-		self.numHandsPlayed = {self.opp1_name : 0, self.opp2_name : 0}
+		self.numHandsPlayed = 0
 		self.winCount = {self.opp1_name : 0, self.opp2_name : 0}
-		# Measure to see if they only play good hands
-		self.instantFold = {self.opp1_name : 0, self.opp2_name : 0}
 		self.myRaiseCount = 0
 		# Pre-Flop Raise Count of the opponents
 		self.pfrCount = {self.opp1_name : 0, self.opp2_name : 0}
@@ -34,7 +32,7 @@ class Statistician:
 		self.pfrBoolean = {self.opp1_name: False, self.opp2_name: False}
 
 		# Post-Flop statistics below
-		self.checkRaise = {self.opp1_name : 0, self.opp2_name : 0}
+		# self.checkRaise = {self.opp1_name : 0, self.opp2_name : 0}
 		self.aggressionFactor = {self.opp1_name : 0, self.opp2_name : 0}
 		self.raiseCountPost = {self.opp1_name : 0, self.opp2_name : 0}
 		self.betCountPost = {self.opp1_name : 0, self.opp2_name : 0}
@@ -43,18 +41,16 @@ class Statistician:
 		self.showdownCount = {self.opp1_name : 0, self.opp2_name : 0}
 		# Continuation bet count
 		self.cbCount = {self.opp1_name : 0, self.opp2_name : 0}
+		self.cbCountBool = {self.opp1_name : False, self.opp2_name : False}
 		# How often opponent makes another cont. bet after first one
-		self.twocbCount = {self.opp1_name : 0, self.opp2_name : 0}
-		self.foldcbBets = {self.opp1_name : 0, self.opp2_name : 0}
+		self.doubleBarrelCount = {self.opp1_name : 0, self.opp2_name : 0}
+		self.doubleBarrelBool = {self.opp1_name : False, self.opp2_name : False}
+		self.tripleBarrelCount = {self.opp1_name : 0, self.opp2_name : 0}
+		self.tripleBarrelBool = {self.opp1_name : False, self.opp2_name : False}
+		# self.foldcbBets = {self.opp1_name : 0, self.opp2_name : 0}
 		# self.fold2cbBets = {self.opp1_name : 0, self.opp2_name : 0}
 		self.foldCount = {self.opp1_name : 0, self.opp2_name : 0}
 		self.checkCount = {self.opp1_name : 0, self.opp2_name : 0}
-
-	# opponent_name is the name of the opponent
-	# opponent_stats is a hash table containing the opponent's stats
-	def getOpponentStatistics(self, opponent_name, opponent_stats):
-		self.winCount = opponent_stats['winCount']
-		self.pfrCount = opponent_stats['pfrCount']
 
 	def processPreflopStatistics(self, opponent_names, hand_statistics):
 		for last_action in hand_statistics:
@@ -88,6 +84,7 @@ class Statistician:
 		for last_action in hand_statistics:
 			split_action = last_action.split(":")
 
+			#Count Opponent Statistics
 			if split_action[-1] in opponent_names:
 				opponent_name = split_action[-1]
 
@@ -95,8 +92,19 @@ class Statistician:
 					self.checkCount[opponent_name] += 1
 
 				elif split_action[0] == RAISE:
+					
 					if self.pfrBoolean[opponent_name] and board_state == FLOP:
 						self.cbCount[opponent_name] += 1
+						self.cbCountBool[opponent_name] = True
+					
+					elif self.cbCountBool[opponent_name] and board_state == TURN:
+						self.doubleBarrelCount[opponent_name] += 1
+						self.doubleBarrelBool[opponent_name] = True
+
+					elif self.doubleBarrelBool[opponent_name] and board_state == RIVER:
+						self.tripleBarrelCount[opponent_name] += 1
+						self.tripleBarrelBool[opponent_name] = True
+
 					self.raiseCountPost[opponent_name] += 1
 
 				elif split_action[0] == CALL:
@@ -106,12 +114,13 @@ class Statistician:
 					self.betCountPost[opponent_name] += 1
 
 				else:
-					self.foldCount[opponent_name] += 1					
-
+					self.foldCount[opponent_name] += 1
+			
 	# Update opponent statistics after each hand
-	def updateOpponentStatistics(self, received_packet):
+	def updateOpponentStatistics(self, received_packet, hand_id):
 		self.opp1_name = received_packet['opponent_1_name']
 		self.opp2_name = received_packet['opponent_2_name']
+		self.numHandsPlayed = hand_id
 
 		if received_packet['packet_name'] == "GETACTION":
 
@@ -126,8 +135,8 @@ class Statistician:
 					state = TURN
 				else:
 					state =  RIVER
-
 				self.processPostFlopStatistics([self.opp1_name, self.opp2_name], received_packet['last_action'], state)
+
 
 		#HANDOVER
 		else:
@@ -143,7 +152,8 @@ class Statistician:
 				if last_action_split[0] == SHOW:
 					self.showdownCount[last_action_split[-1]] += 1
 
-
+	def computeMatchStatistics(self):
+		pass
 
 
 
