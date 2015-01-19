@@ -32,7 +32,9 @@ class Statistician:
 		self.pfrBoolean = {self.opp1_name: False, self.opp2_name: False}
 
 		# Post-Flop statistics below
-		# self.checkRaise = {self.opp1_name : 0, self.opp2_name : 0}
+		# Determine how many times each opponent goes to Flop
+		self.seenFlop = {self.opp1_name : 0, self.opp2_name : 0}
+		self.checkRaise = {self.opp1_name : 0, self.opp2_name : 0}
 		self.aggressionFactor = {self.opp1_name : 0, self.opp2_name : 0}
 		self.raiseCountPost = {self.opp1_name : 0, self.opp2_name : 0}
 		self.betCountPost = {self.opp1_name : 0, self.opp2_name : 0}
@@ -47,10 +49,19 @@ class Statistician:
 		self.doubleBarrelBool = {self.opp1_name : False, self.opp2_name : False}
 		self.tripleBarrelCount = {self.opp1_name : 0, self.opp2_name : 0}
 		self.tripleBarrelBool = {self.opp1_name : False, self.opp2_name : False}
-		# self.foldcbBets = {self.opp1_name : 0, self.opp2_name : 0}
-		# self.fold2cbBets = {self.opp1_name : 0, self.opp2_name : 0}
+		
 		self.foldCount = {self.opp1_name : 0, self.opp2_name : 0}
 		self.checkCount = {self.opp1_name : 0, self.opp2_name : 0}
+		# To compute Check-Raise
+		self.checkCountFlop = {self.opp1_name : 0, self.opp2_name : 0}
+		self.raiseCountFlop = {self.opp1_name : 0, self.opp2_name : 0}
+		# self.raiseCountTurn = {self.opp1_name : 0, self.opp2_name : 0}
+		# self.raiseCountRiver = {self.opp1_name : 0, self.opp2_name : 0}
+		# self.foldcbBets = {self.opp1_name : 0, self.opp2_name : 0}
+		# self.fold2cbBets = {self.opp1_name : 0, self.opp2_name : 0}
+		# self.checkCountTurn = {self.opp1_name : 0, self.opp2_name : 0}
+		# self.checkCountRiver = {self.opp1_name : 0, self.opp2_name : 0}
+
 
 	def processPreflopStatistics(self, opponent_names, hand_statistics):
 		for last_action in hand_statistics:
@@ -88,21 +99,34 @@ class Statistician:
 			if split_action[-1] in opponent_names:
 				opponent_name = split_action[-1]
 
+				self.seenFlop[opponent_name] += 1
+
 				if split_action[0] == CHECK:
+					if board_state == FLOP:
+						self.checkCountFlop[opponent_name] += 1
+					
+					# elif board_state == TURN:
+					# 	self.checkCountTurn[opponent_name] += 1
+					
+					# else:
+					# 	self.checkCountRiver[opponent_name] += 1
 					self.checkCount[opponent_name] += 1
 
 				elif split_action[0] == RAISE:
 					
 					if self.pfrBoolean[opponent_name] and board_state == FLOP:
 						self.cbCount[opponent_name] += 1
+						self.raiseCountFlop[opponent_name] += 1
 						self.cbCountBool[opponent_name] = True
 					
 					elif self.cbCountBool[opponent_name] and board_state == TURN:
 						self.doubleBarrelCount[opponent_name] += 1
+						self.raiseCountTurn[opponent_name] += 1
 						self.doubleBarrelBool[opponent_name] = True
 
 					elif self.doubleBarrelBool[opponent_name] and board_state == RIVER:
 						self.tripleBarrelCount[opponent_name] += 1
+						self.raiseCountRiver[opponent_name] += 1
 						self.tripleBarrelBool[opponent_name] = True
 
 					self.raiseCountPost[opponent_name] += 1
@@ -115,7 +139,15 @@ class Statistician:
 
 				else:
 					self.foldCount[opponent_name] += 1
-			
+
+		for opp_name in opponent_names:
+			if (board_state == FLOP and (self.checkCountFlop[opp_name] == self.raiseCountFlop[opp_name])):
+				self.checkRaise[opp_name] += 1
+			# elif (board_state == TURN and (self.checkCountTurn[opp_name] == self.raiseCountTurn[opp_name])):
+			# 	self.checkRaise[opp_name] += 1		
+			# elif (board_state == RIVER and (self.checkCountRiver[opp_name] == self.raiseCountRiver[opp_name])):
+			# 	self.checkRaise[opp_name] += 1	
+	
 	# Update opponent statistics after each hand
 	def updateOpponentStatistics(self, received_packet, hand_id):
 		self.opp1_name = received_packet['opponent_1_name']
@@ -152,8 +184,31 @@ class Statistician:
 				if last_action_split[0] == SHOW:
 					self.showdownCount[last_action_split[-1]] += 1
 
-	def computeMatchStatistics(self):
+	def compileMatchStatistics(self):
 		pass
+	
+	def getPFR():
+		pass
+
+	def getPFRFold():
+		pass
+
+	def getWinPercent():
+		pass
+
+	def getCallRaisePercent():
+		pass
+
+	def getCheckRaise():
+		pass
+
+	def getShowdownPercent():
+		pass
+
+
+
+
+
 
 
 
