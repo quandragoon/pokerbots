@@ -44,7 +44,7 @@ THIRD_PRIZE  = -80
 # ICM Helper function
 def calc_icm (a, b, c):
 
-    s = float(a + b + c)
+    s = a + b + c
 
     if a == s:
         return (FIRST_PRIZE, SECOND_PRIZE, THIRD_PRIZE)
@@ -56,6 +56,7 @@ def calc_icm (a, b, c):
         return (THIRD_PRIZE, SECOND_PRIZE, FIRST_PRIZE)
 
     else:
+        s = float(s)
     
         pa1 = a/s
         pb1 = b/s
@@ -108,6 +109,8 @@ class Player:
         self.potsize                = 0
 
 
+
+
     def makeBet(self, amount):
         return int(max(self.minBet, min(amount, self.maxBet)))
 
@@ -131,6 +134,8 @@ class Player:
         self.history_storage[received_packet['key']] = received_packet['value']
 
 
+
+
     def newgame_handler(self, received_packet):
         self.opponent_1_name = received_packet['opponent_1_name']
         self.opponent_2_name = received_packet['opponent_2_name']
@@ -147,6 +152,9 @@ class Player:
             self.hasPlayed_opponent_2 = True
             #statistician.getOpponentStatistics(opponent_2_name, history_storage[opponent_2_name])
 
+
+
+
     def newhand_handler(self, received_packet):
         self.my_hand = received_packet['hand']
         self.my_seat = received_packet['seat']
@@ -155,6 +163,9 @@ class Player:
         self.hand_id = received_packet['handID']
         self.num_active_players = received_packet['num_active_players']
         self.list_of_active_players = received_packet['active_players']
+
+
+
 
 
     def bet_handler(self, winning_factor):
@@ -173,6 +184,9 @@ class Player:
         # s.send(BET + ':' + str(self.makeBet(bet_amount)) + '\n')
 
 
+
+
+
     def raise_handler(self, winning_factor):
         a = random.random()
         raise_amount = 0
@@ -187,6 +201,49 @@ class Player:
 
         return self.makeRaise(raise_amount)
         # s.send(RAISE + ':' + str(self.makeRaise(raise_amount)) + '\n')
+
+
+
+
+
+
+    def should_call (self, equity):
+        opp_stack_sizes = self.list_of_stacksizes
+        del opp_stack_sizes[self.my_seat-1]
+
+        fold_ew      = 0
+        call_win_ew  = 0
+        call_lose_ew = 0
+
+        if self.num_active_players == 2: # only two players left
+            other_guy_stacksize = 0
+            if opp_stack_sizes[0] == 0:
+                other_guy_stacksize = opp_stack_sizes[1]
+            else:
+                other_guy_stacksize = opp_stack_sizes[0]
+            fold_ew      = calc_icm(self.my_stacksize,                       0, other_guy_stacksize+self.potsize)[0]
+            call_win_ew  = calc_icm(self.my_stacksize+self.potsize,          0, other_guy_stacksize)[0]
+            call_lose_ew = calc_icm(self.my_stacksize-int(self.call_amount), 0, other_guy_stacksize+self.potsize+int(self.call_amount))[0]
+
+        else: # all three players are active
+            fold_ew_a      = calc_icm(self.my_stacksize, opp_stack_sizes[0]+self.potsize, opp_stack_sizes[1])[0]
+            fold_ew_b      = calc_icm(self.my_stacksize, opp_stack_sizes[0],              opp_stack_sizes[1]+self.potsize)[0]
+            fold_ew        = 0.5*(fold_ew_a+fold_ew_b)
+            call_win_ew    = calc_icm(self.my_stacksize+self.potsize,          opp_stack_sizes[0],                                    opp_stack_sizes[1])[0]
+            call_lose_ew_a = calc_icm(self.my_stacksize-int(self.call_amount), opp_stack_sizes[0]+self.potsize+int(self.call_amount), opp_stack_sizes[1])[0]
+            call_lose_ew_b = calc_icm(self.my_stacksize-int(self.call_amount), opp_stack_sizes[0], opp_stack_sizes[1]+self.potsize+int(self.call_amount))[0]
+            call_lose_ew   = 0.5*(call_lose_ew_a+call_lose_ew_b)
+
+        # logic to determine call/fold
+        print 'MY STACK: ' + str(self.my_stacksize)
+        print 'POT     : ' + str(self.potsize)
+        print 'FOLD EW: ' + str(fold_ew) + '\n' + "CALL EW: " + str(equity*call_win_ew + (1-equity)*call_lose_ew) + '\n'
+        if fold_ew < equity*call_win_ew + (1-equity)*call_lose_ew:
+            return True
+        return False
+
+
+
 
 
     def get_best_action(self, received_packet, avail_actions = []):
@@ -231,46 +288,28 @@ class Player:
                 return RAISE + ":" + str(amount)
         
         if CALL in avail_actions: 
-            opp_stack_sizes = self.list_of_stacksizes
-            del opp_stack_sizes[self.my_seat-1]
-
-            if opp_stack_sizes[0] == 0 and self.num_active_players == 2: # only two players left
-                fold_ew = calc_icm(self.my_stacksize, 0, opp_stack_sizes[1]+self.potsize)[0]
-                call_win_ew = calc_icm(self.my_stacksize+self.potsize, 0, opp_stack_sizes[1])[0]
-                call_lose_ew = calc_icm(self.my_stacksize-int(self.call_amount), 0, opp_stack_sizes[1]+self.potsize+int(self.call_amount))[0]
-
-            elif opp_stack_sizes[1] == 0 and self.num_active_players == 2: # other possible scenario for two players left
-                fold_ew = calc_icm(self.my_stacksize, 0, opp_stack_sizes[0]+self.potsize)[0]
-                call_win_ew = calc_icm(self.my_stacksize+self.potsize, 0, opp_stack_sizes[0])[0]
-                call_lose_ew = calc_icm(self.my_stacksize-int(self.call_amount), 0, opp_stack_sizes[0]+self.potsize+int(self.call_amount))[0]
-
-            else: # all three players are active
-                fold_ew_a = calc_icm(self.my_stacksize, opp_stack_sizes[0]+self.potsize, opp_stack_sizes[1])[0]
-                fold_ew_b = calc_icm(self.my_stacksize, opp_stack_sizes[0], opp_stack_sizes[1]+self.potsize)[0]
-                fold_ew = 0.5*(fold_ew_a+fold_ew_b)
-                call_win_ew = calc_icm(self.my_stacksize+self.potsize, opp_stack_sizes[0], opp_stack_sizes[1])[0]
-                call_lose_ew_a = calc_icm(self.my_stacksize-int(self.call_amount), opp_stack_sizes[0]+self.potsize+int(self.call_amount), opp_stack_sizes[1])[0]
-                call_lose_ew_b = calc_icm(self.my_stacksize-int(self.call_amount), opp_stack_sizes[0], opp_stack_sizes[1]+self.potsize+int(self.call_amount))[0]
-                call_lose_ew = 0.5*(call_lose_ew_a+call_lose_ew_b)
-
-            # logic to determine call/fold
-            print 'FOLD EW is' + str(fold_ew) + '\n' + "CALL EW IS" + str(equity*call_win_ew + (1-equity)*call_lose_ew) + '\n'
-            if fold_ew < equity*call_win_ew + (1-equity)*call_lose_ew:
+            if self.should_call(equity):
                 return CALL + ":" + str(self.call_amount)
             else:
                 return FOLD
 
         return FOLD
 
+
+
+
+
+
+
     def getaction_handler(self, received_packet):
-        # hand_equity = 
 
         # for action in received_packet['last_action']:
         #     split_action = action.split(":")
 
         # statistician.updateOpponentStatistics(received_packet)
         self.list_of_stacksizes = received_packet['stack_size']
-        self.potsize = received_packet['potsize']
+        self.my_stacksize       = self.list_of_stacksizes[self.my_seat - 1]
+        self.potsize            = received_packet['potsize']
 
         for action in received_packet['legal_actions']:
             split_action = action.split(":")
@@ -307,6 +346,7 @@ class Player:
             #     self.maxBet = int(split_action[2])
 
             #     s.send(split_action[0]+":"+str(self.maxBet) + "\n")  
+
 
 
     def handover_handler(self, received_packet):
