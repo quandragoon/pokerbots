@@ -235,9 +235,9 @@ class Player:
             call_lose_ew   = 0.5*(call_lose_ew_a+call_lose_ew_b)
 
         # logic to determine call/fold
-        print 'MY STACK: ' + str(self.my_stacksize)
-        print 'POT     : ' + str(self.potsize)
-        print 'FOLD EW: ' + str(fold_ew) + '\n' + "CALL EW: " + str(equity*call_win_ew + (1-equity)*call_lose_ew) + '\n'
+        # print 'MY STACK: ' + str(self.my_stacksize)
+        # print 'POT     : ' + str(self.potsize)
+        # print 'FOLD EW: ' + str(fold_ew) + '\n' + "CALL EW: " + str(equity*call_win_ew + (1-equity)*call_lose_ew) + '\n'
         if fold_ew < equity*call_win_ew + (1-equity)*call_lose_ew:
             return True
         return False

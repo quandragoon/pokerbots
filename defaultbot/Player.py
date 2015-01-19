@@ -223,12 +223,14 @@ class Player:
         return CHECK
 
     def getaction_handler(self, received_packet):
-        # hand_equity = 
 
         # for action in received_packet['last_action']:
         #     split_action = action.split(":")
 
         # statistician.updateOpponentStatistics(received_packet)
+
+        self.list_of_stacksizes = received_packet['stack_size']
+        self.my_stacksize = self.list_of_stacksizes[my_seat - 1]
 
         for action in received_packet['legal_actions']:
             split_action = action.split(":")
