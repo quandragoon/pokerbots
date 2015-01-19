@@ -36,6 +36,35 @@ ITER_TABLE = {0 : 100000, 3:10000, 4:1000, 5:100}
 # print pbots_calc.calc("AhKh:xx", "ThJhQh2s7s", "", 1)
 # print pbots_calc.calc("AhKh:xx:xx", "JhQh2s7s", "", 100)
 
+
+FIRST_PRIZE  = 100
+SECOND_PRIZE = -20
+THIRD_PRIZE  = -80
+
+# ICM Helper function
+def calc_icm (a, b, c):
+    s = float(a + b + c)
+    
+    pa1 = a/s
+    pb1 = b/s
+    pc1 = c/s
+    
+    pa2 = pb1 * (a/(s-b)) + pc1 * (a/(s-c))
+    pb2 = pa1 * (b/(s-a)) + pc1 * (b/(s-c))
+    pc2 = pa1 * (c/(s-a)) + pb1 * (c/(s-b))
+    
+    pa3 = 1 - pa1 - pa2
+    pb3 = 1 - pb1 - pb2
+    pc3 = 1 - pc1 - pc2
+
+    ewa = pa1 * FIRST_PRIZE + pa2 * SECOND_PRIZE + pa3 * THIRD_PRIZE
+    ewb = pb1 * FIRST_PRIZE + pb2 * SECOND_PRIZE + pb3 * THIRD_PRIZE
+    ewc = pc1 * FIRST_PRIZE + pc2 * SECOND_PRIZE + pc3 * THIRD_PRIZE
+
+    return (ewa, ewb, ewc)
+
+
+
 class Player:
 
     def __init__ (self):
