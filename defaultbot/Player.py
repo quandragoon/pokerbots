@@ -92,6 +92,7 @@ class Player:
         self.is_new_round           = True
         self.last_action            = None
         self.num_boardcards         = -1
+        self.my_seat                = 1
 
 
     def makeBet(self, amount):
@@ -135,9 +136,9 @@ class Player:
 
     def newhand_handler(self, received_packet):
         self.my_hand = received_packet['hand']
-        my_seat = received_packet['seat']
+        self.my_seat = received_packet['seat']
         self.list_of_stacksizes = received_packet['stack_size']
-        self.my_original_stacksize = self.list_of_stacksizes[my_seat - 1]
+        self.my_original_stacksize = self.list_of_stacksizes[self.my_seat - 1]
         self.hand_id = received_packet['handID']
         self.num_active_players = received_packet['num_active_players']
         self.list_of_active_players = received_packet['active_players']
@@ -230,7 +231,7 @@ class Player:
         # statistician.updateOpponentStatistics(received_packet)
 
         self.list_of_stacksizes = received_packet['stack_size']
-        self.my_stacksize = self.list_of_stacksizes[my_seat - 1]
+        self.my_stacksize = self.list_of_stacksizes[self.my_seat - 1]
 
         for action in received_packet['legal_actions']:
             split_action = action.split(":")
