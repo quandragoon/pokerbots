@@ -25,6 +25,12 @@ PLAYER_1_PATH = ./defaultbot
 PLAYER_1_NAME = player1
 PLAYER_1_RESET_KEYS = false
 
+# PLAYER_2_TYPE = FOLDER 
+# PLAYER_2_PATH = ./testbot
+#   PLAYER_1_SCONS_ARGS = 
+# PLAYER_2_NAME = player2
+# PLAYER_2_RESET_KEYS = false
+
 # PLAYER_1_TYPE = RANDOM
 # PLAYER_1_NAME = P1
 

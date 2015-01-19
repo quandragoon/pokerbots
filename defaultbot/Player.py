@@ -20,7 +20,13 @@ FOLD  = "FOLD"
 CALL  = "CALL"
 CHECK = "CHECK"
 
-FOLD_THRES = 0.3
+THREE_FOLD_THRES    = 0.35
+THREE_RAISE_THRES   = 0.7
+THREE_RERAISE_THRES = 0.9
+TWO_FOLD_THRES      = 0.2
+TWO_RAISE_THRES     = 0.6
+TWO_RERAISE_THRES   = 0.8
+
 POWER = 4
 
 
@@ -50,6 +56,13 @@ class Player:
         self.maxRaise               = 0
         self.my_original_stacksize  = 0
         self.alpha                  = 0.5 # how agressive we are
+        self.fold_thres             = THREE_FOLD_THRES
+        self.reraise_thres          = THREE_RERAISE_THRES
+        self.raise_thres            = THREE_RAISE_THRES
+        self.call_amount            = 0
+        self.is_new_round           = True
+        self.last_action            = None
+        self.num_boardcards         = -1
 
 
     def makeBet(self, amount):
@@ -135,27 +148,48 @@ class Player:
 
     def get_best_action(self, received_packet, avail_actions = []):
         equity = None
+
+        # determine if we are still in the same betting round to prevent raising to infinity problem
+        if received_packet['num_boardcards'] == self.num_boardcards:
+            self.is_new_round = False
+        else: 
+            self.is_new_round = True
+            self.num_boardcards = received_packet['num_boardcards'] 
+
         if received_packet['num_active_players'] == 3:
+            self.fold_thres = THREE_FOLD_THRES
+            self.raise_thres = THREE_RAISE_THRES
+            self.reraise_thres = THREE_RERAISE_THRES
             equity = pbots_calc.calc(':'.join([self.my_hand, 'xx', 'xx']), ''.join(received_packet['boardcards']), 
-                "", ITER_TABLE[received_packet['num_boardcards']])
+                "", ITER_TABLE[self.num_boardcards])
         else:
+            self.fold_thres = TWO_FOLD_THRES
+            self.raise_thres = TWO_RAISE_THRES
+            self.reraise_thres = TWO_RERAISE_THRES
             equity = pbots_calc.calc(':'.join([self.my_hand, 'xx']), ''.join(received_packet['boardcards']), 
-                "", ITER_TABLE[received_packet['num_boardcards']])
+                "", ITER_TABLE[self.num_boardcards])
 
         equity = equity.ev[0]
-        if equity < FOLD_THRES:
+        do_reraise = random.random() > self.reraise_thres
+
+        if equity < self.fold_thres:
+            # TODO: Implement bluffing / call here
             if CHECK in avail_actions:
                 return CHECK
             return FOLD
 
-        else: 
-            winning_factor = ((equity - FOLD_THRES) / (1 - FOLD_THRES))**POWER
+        elif equity > self.raise_thres and (self.is_new_round or do_reraise): 
+            winning_factor = ((equity - self.fold_thres) / (1 - self.fold_thres))**POWER
             if BET in avail_actions:
                 amount = self.bet_handler(winning_factor)
                 return BET + ":" + str(amount)
             elif RAISE in avail_actions:
                 amount = self.raise_handler(winning_factor)
                 return RAISE + ":" + str(amount)
+        
+        if CALL in avail_actions: 
+            # TODO: CALLING LOGIC HERE
+            return CALL + ":" + str(self.call_amount)
 
         return CHECK
 
@@ -176,7 +210,9 @@ class Player:
             elif split_action[0] == RAISE:
                 self.minRaise = int(split_action[1])
                 self.maxRaise = int(split_action[2])
-        
+            elif split_action[0] == CALL:
+                self.call_amount = split_action[1]
+
         avail_actions = [(e.split(":"))[0] for e in received_packet['legal_actions']]
         action = self.get_best_action (received_packet, avail_actions)
         s.send(action + "\n")
