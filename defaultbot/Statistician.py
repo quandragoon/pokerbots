@@ -122,12 +122,12 @@ class Statistician:
 					
 					elif self.cbCountBool[opponent_name] and board_state == TURN:
 						self.doubleBarrelCount[opponent_name] += 1
-						self.raiseCountTurn[opponent_name] += 1
+						# self.raiseCountTurn[opponent_name] += 1
 						self.doubleBarrelBool[opponent_name] = True
 
 					elif self.doubleBarrelBool[opponent_name] and board_state == RIVER:
 						self.tripleBarrelCount[opponent_name] += 1
-						self.raiseCountRiver[opponent_name] += 1
+						# self.raiseCountRiver[opponent_name] += 1
 						self.tripleBarrelBool[opponent_name] = True
 
 					self.raiseCountPost[opponent_name] += 1
