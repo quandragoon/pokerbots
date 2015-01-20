@@ -27,19 +27,23 @@ OUT    = 1
 ACTIVE = 2 
 
 
-THREE_FOLD_THRES    = 0.3
+# equity threshold
+THREE_FOLD_THRES    = 0.2
 THREE_RAISE_THRES   = 0.7
-THREE_RERAISE_THRES = 0.9
 TWO_FOLD_THRES      = 0.2
 TWO_RAISE_THRES     = 0.6
-TWO_RERAISE_THRES   = 0.8
+
+
+# randomness threshold
+THREE_RERAISE_THRES = 0.8
+TWO_RERAISE_THRES   = 0.6
 
 POWER = 4
 
 
 
 ITER_TABLE = {0 : 30000, 3 : 30000, 4 : 30000, 5 : 30000}
-BITCH_FACTOR_TABLE = {0 : 0.5, 3 : 0.75, 4 : 0.9, 5 : 1}
+BITCH_FACTOR_TABLE = {0 : 0.75, 3 : 0.8, 4 : 0.9, 5 : 1}
 
 
 # print pbots_calc.calc("AhKh:xx", "ThJhQh2s7s", "", 1)
@@ -281,11 +285,23 @@ class Player:
             call_lose_ew   = 0.5*(call_lose_ew_a+call_lose_ew_b)
 
         # logic to determine call/fold
+        bitch_factor = BITCH_FACTOR_TABLE[self.num_boardcards]
+        lhs = 0
+        if fold_ew > 0:
+            lhs = fold_ew * bitch_factor
+        else:
+            lhs = fold_ew / bitch_factor
+        rhs = equity*call_win_ew + (1-equity)*call_lose_ew
+
+        # print 'HAND ID : ' + str(self.hand_id)
+        # print 'MY HAND : ' + self.my_hand
         # print 'MY STACK: ' + str(self.my_stacksize)
         # print 'POT     : ' + str(self.potsize)
-        # print 'FOLD EW: ' + str(fold_ew) + '\n' + "CALL EW: " + str(equity*call_win_ew + (1-equity)*call_lose_ew) + '\n'
-        bitch_factor = BITCH_FACTOR_TABLE[self.num_boardcards]
-        if (bitch_factor*fold_ew) < equity*call_win_ew + (1-equity)*call_lose_ew:
+        # print 'EQUITY  : ' + str(equity)
+        # print 'FOLD EW : ' + str(fold_ew) 
+        # print "CALL EW : " + str(rhs)
+        # print 'BITCH F : ' + str(bitch_factor)
+        if lhs < rhs:
             return True
         return False
 
@@ -318,6 +334,8 @@ class Player:
 
         equity = equity.ev[0]
         do_reraise = random.random() > self.reraise_thres
+
+        # print 'EQUITY: ' + str(equity)
 
         if equity < self.fold_thres:
             # TODO: Implement bluffing / call here
