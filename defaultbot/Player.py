@@ -31,7 +31,7 @@ POWER = 4
 
 
 
-ITER_TABLE = {0 : 100000, 3:10000, 4:1000, 5:100}
+ITER_TABLE = {0 : 30000, 3 : 30000, 4 : 30000, 5 : 30000}
 
 # print pbots_calc.calc("AhKh:xx", "ThJhQh2s7s", "", 1)
 # print pbots_calc.calc("AhKh:xx:xx", "JhQh2s7s", "", 100)
