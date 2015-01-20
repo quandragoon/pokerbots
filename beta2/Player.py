@@ -27,7 +27,7 @@ OUT    = 1
 ACTIVE = 2 
 
 
-THREE_FOLD_THRES    = 0.35
+THREE_FOLD_THRES    = 0.3
 THREE_RAISE_THRES   = 0.7
 THREE_RERAISE_THRES = 0.9
 TWO_FOLD_THRES      = 0.2
@@ -39,7 +39,7 @@ POWER = 4
 
 
 ITER_TABLE = {0 : 100000, 3 : 100000, 4 : 100000, 5 : 100000}
-BITCH_FACTOR_TABLE = {0 : 0.6, 3 : 0.75, 4 : 9, 5 : 1}
+BITCH_FACTOR_TABLE = {0 : 0.5, 3 : 0.75, 4 : 0.9, 5 : 1}
 
 
 # print pbots_calc.calc("AhKh:xx", "ThJhQh2s7s", "", 1)
@@ -340,7 +340,7 @@ class Player:
             else:
                 return FOLD
 
-        return FOLD
+        return CHECK
 
 
 

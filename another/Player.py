@@ -340,7 +340,7 @@ class Player:
             else:
                 return FOLD
 
-        return FOLD
+        return CHECK
 
 
 
