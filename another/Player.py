@@ -20,6 +20,13 @@ FOLD  = "FOLD"
 CALL  = "CALL"
 CHECK = "CHECK"
 
+
+# Statuses
+FOLDED = 0
+OUT    = 1
+ACTIVE = 2 
+
+
 THREE_FOLD_THRES    = 0.35
 THREE_RAISE_THRES   = 0.7
 THREE_RERAISE_THRES = 0.9
@@ -31,7 +38,7 @@ POWER = 4
 
 
 
-ITER_TABLE = {0 : 100000, 3:10000, 4:1000, 5:100}
+ITER_TABLE = {0 : 100000, 3:100000, 4:100000, 5:100000}
 
 # print pbots_calc.calc("AhKh:xx", "ThJhQh2s7s", "", 1)
 # print pbots_calc.calc("AhKh:xx:xx", "JhQh2s7s", "", 100)
@@ -78,9 +85,22 @@ def calc_icm (a, b, c):
 
 
 
+
+class Opponent:
+    def __init__ (self, name):
+        self.seat        = 0 # 0, 1, 2
+        self.name        = name
+        self.stack_size  = 200
+        self.status      = ACTIVE
+        self.last_action = None
+
+
+
+
 class Player:
 
     def __init__ (self):
+        self.my_name                = ""
         self.opponent_1_name        = ""
         self.opponent_2_name        = ""
         self.hasPlayed_opponent_1   = False
@@ -107,6 +127,7 @@ class Player:
         self.num_boardcards         = -1
         self.my_seat                = 1
         self.potsize                = 0
+        self.opp_dict               = {}
 
 
 
@@ -140,6 +161,10 @@ class Player:
         self.opponent_1_name = received_packet['opponent_1_name']
         self.opponent_2_name = received_packet['opponent_2_name']
 
+        self.my_name = received_packet['player_name']
+        self.opp_dict[self.opponent_1_name] = Opponent(self.opponent_1_name)
+        self.opp_dict[self.opponent_2_name] = Opponent(self.opponent_2_name)
+
         # If we have already played the opponent before, 
         # we load their statistics from the previous encounter
         # for this game. NOTE that Historian is just an instance of the Statistician/Historian class
@@ -164,6 +189,17 @@ class Player:
         self.num_active_players = received_packet['num_active_players']
         self.list_of_active_players = received_packet['active_players']
 
+        names = received_packet['player_names']
+        for i in range(len(names)):
+            name = names[i]
+            if name != self.my_name:
+                self.opp_dict[name].seat = i 
+                self.opp_dict[name].stack_size = self.list_of_stacksizes[i]
+                # update status
+                if self.opp_dict[name].stack_size == 0:
+                    self.opp_dict[name].status = OUT
+                else:
+                    self.opp_dict[name].status = ACTIVE
 
 
 
@@ -217,21 +253,22 @@ class Player:
 
         if self.num_active_players == 2: # only two players left
             other_guy_stacksize = 0
+            inactive_guy_stacksize = 0
             if opp_stack_sizes[0] == 0:
                 other_guy_stacksize = opp_stack_sizes[1]
             else:
                 other_guy_stacksize = opp_stack_sizes[0]
-            fold_ew      = calc_icm(self.my_stacksize,                       0, other_guy_stacksize+self.potsize)[0]
-            call_win_ew  = calc_icm(self.my_stacksize+self.potsize,          0, other_guy_stacksize)[0]
-            call_lose_ew = calc_icm(self.my_stacksize-int(self.call_amount), 0, other_guy_stacksize+self.potsize+int(self.call_amount))[0]
+            fold_ew      = calc_icm(self.my_stacksize,                  0, other_guy_stacksize+self.potsize)[0]
+            call_win_ew  = calc_icm(self.my_stacksize+self.potsize,     0, other_guy_stacksize)[0]
+            call_lose_ew = calc_icm(self.my_stacksize-self.call_amount, 0, other_guy_stacksize+self.potsize+self.call_amount)[0]
 
         else: # all three players are active
             fold_ew_a      = calc_icm(self.my_stacksize, opp_stack_sizes[0]+self.potsize, opp_stack_sizes[1])[0]
             fold_ew_b      = calc_icm(self.my_stacksize, opp_stack_sizes[0],              opp_stack_sizes[1]+self.potsize)[0]
             fold_ew        = 0.5*(fold_ew_a+fold_ew_b)
-            call_win_ew    = calc_icm(self.my_stacksize+self.potsize,          opp_stack_sizes[0],                                    opp_stack_sizes[1])[0]
-            call_lose_ew_a = calc_icm(self.my_stacksize-int(self.call_amount), opp_stack_sizes[0]+self.potsize+int(self.call_amount), opp_stack_sizes[1])[0]
-            call_lose_ew_b = calc_icm(self.my_stacksize-int(self.call_amount), opp_stack_sizes[0], opp_stack_sizes[1]+self.potsize+int(self.call_amount))[0]
+            call_win_ew    = calc_icm(self.my_stacksize+self.potsize,     opp_stack_sizes[0],                               opp_stack_sizes[1])[0]
+            call_lose_ew_a = calc_icm(self.my_stacksize-self.call_amount, opp_stack_sizes[0]+self.potsize+self.call_amount, opp_stack_sizes[1])[0]
+            call_lose_ew_b = calc_icm(self.my_stacksize-self.call_amount, opp_stack_sizes[0], opp_stack_sizes[1]+self.potsize+self.call_amount)[0]
             call_lose_ew   = 0.5*(call_lose_ew_a+call_lose_ew_b)
 
         # logic to determine call/fold
@@ -307,9 +344,30 @@ class Player:
         #     split_action = action.split(":")
 
         # statistician.updateOpponentStatistics(received_packet)
+        print repr(received_packet['last_action'])
         self.list_of_stacksizes = received_packet['stack_size']
         self.my_stacksize       = self.list_of_stacksizes[self.my_seat - 1]
         self.potsize            = received_packet['potsize']
+
+        last_actions = received_packet['last_action']
+        for act in last_actions:
+            sp = act.split(":")
+            name = sp[-1]
+            if name in self.opp_dict:
+                self.opp_dict[name].last_action = sp[0]
+                if sp[0] == FOLD:
+                    self.opp_dict[name].status = FOLDED
+
+        for name in self.opp_dict:
+            self.opp_dict[name].stack_size = self.list_of_stacksizes[self.opp_dict[name].seat]
+
+        print '###################################'
+        for shit in self.opp_dict:    
+            print shit
+            print self.opp_dict[shit].stack_size
+            print self.opp_dict[shit].status
+            print self.opp_dict[shit].last_action
+        print '###################################'
 
         for action in received_packet['legal_actions']:
             split_action = action.split(":")
@@ -321,7 +379,7 @@ class Player:
                 self.minRaise = int(split_action[1])
                 self.maxRaise = int(split_action[2])
             elif split_action[0] == CALL:
-                self.call_amount = split_action[1]
+                self.call_amount = int(split_action[1])
 
         avail_actions = [(e.split(":"))[0] for e in received_packet['legal_actions']]
         action = self.get_best_action (received_packet, avail_actions)
