@@ -22,6 +22,7 @@ class Statistician:
 		self.opp2_name = ""
 		self.numHandsPlayed = 0
 		self.winCount = {self.opp1_name : 0, self.opp2_name : 0}
+		self.myWinCount = 0
 		self.myRaiseCount = 0
 		# Pre-Flop Raise Count of the opponents
 		self.pfrCount = {self.opp1_name : 0, self.opp2_name : 0}
@@ -173,9 +174,15 @@ class Statistician:
 		#HANDOVER
 		else:
 			winner_string = received_packet['last_action'][-1]
-			hand_winner = winner_string.split(":")[-1]
-			if hand_winner == self.opp1_name or hand_winner == self.opp2_name:
-				self.winCount[hand_winner] += 1
+			winner_string_split = winner_string.split(":")
+			hand_winner = winner_string_split[-1]
+			winning_amount = winner_string_split[-2]
+
+			if winning_amount > 10:
+				if hand_winner == self.opp1_name or hand_winner == self.opp2_name:
+					self.winCount[hand_winner] += 1
+				else:
+					self.myWinCount += 1
 
 			#Compute showdown Count
 			for last_action in received_packet['last_action']:
