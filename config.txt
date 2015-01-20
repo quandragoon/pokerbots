@@ -5,7 +5,7 @@ CONNECTION_TIMEOUT = 10
 TIME_RESTRICTION_PER_GAME = 10
 ENFORCE_TIMING_RESTRICTION = false
 DISPLAY_ILLEGAL_ACTIONS = false
-TRIPLICATE = false
+TRIPLICATE = true
 
 # TYPE can be FOLDER, SOCKET, RANDOM, or CHECKFOLD
 # NAME is the name of bot and determines which persistent datastore the bot
@@ -22,14 +22,21 @@ TRIPLICATE = false
 PLAYER_1_TYPE = FOLDER 
 PLAYER_1_PATH = ./defaultbot
 #   PLAYER_1_SCONS_ARGS = 
-PLAYER_1_NAME = player1
+PLAYER_1_NAME = worst_bot
 PLAYER_1_RESET_KEYS = false
 
 PLAYER_2_TYPE = FOLDER 
 PLAYER_2_PATH = ./another
 #   PLAYER_1_SCONS_ARGS = 
-PLAYER_2_NAME = player2
+PLAYER_2_NAME = beta1
 PLAYER_2_RESET_KEYS = false
+
+PLAYER_3_TYPE = FOLDER 
+PLAYER_3_PATH = ./another
+#   PLAYER_1_SCONS_ARGS = 
+PLAYER_3_NAME = beta2
+PLAYER_3_RESET_KEYS = false
+
 
 # PLAYER_1_TYPE = RANDOM
 # PLAYER_1_NAME = P1
@@ -42,8 +49,8 @@ PLAYER_2_RESET_KEYS = false
 # PLAYER_2_TYPE = RANDOM
 # PLAYER_2_NAME = P2
 
-PLAYER_3_TYPE = RANDOM
-PLAYER_3_NAME = randombot
+# PLAYER_3_TYPE = RANDOM
+# PLAYER_3_NAME = randombot
 
 # RANDOM: Engine will use its own bot that plays randomly.
 #   PLAYER_1_TYPE = RANDOM
