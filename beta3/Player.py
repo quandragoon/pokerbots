@@ -261,44 +261,63 @@ class Player:
 
         # check if one is out
         one_out = False
+        guy_out = ""
         guy_active = ""
-        guy_inactive = ""
+        guy_folded = ""
         for name in self.opp_dict:
-            if self.opp_dict[name].status == OUT or self.opp_dict[name].status == FOLDED:
+            if self.opp_dict[name].status == OUT:
                 one_out = True
-                guy_inactive = name
+                guy_out = name
             else:
                 guy_active = name
 
-        if one_out:
+        if one_out: #heads-up
             other_guy_stacksize = self.opp_dict[guy_active].stack_size
-            inactive_stack = self.opp_dict[guy_inactive].stack_size
-            fold_ew      = calc_icm(self.my_stacksize,                  inactive_stack, other_guy_stacksize+self.potsize)[0]
-            call_win_ew  = calc_icm(self.my_stacksize+self.potsize,     inactive_stack, other_guy_stacksize)[0]
-            call_lose_ew = calc_icm(self.my_stacksize-self.call_amount, inactive_stack, other_guy_stacksize+self.potsize+self.call_amount)[0]
 
-        else: # all three players are active
+            if other_guy_stacksize <= 0.05*self.my_stacksize:
+                return True
+
+            else:
+                fold_chips = self.my_stacksize
+                call_lose_chips = self.my_stacksize - self.call_amount
+                call_win_chips = self.my_stacksize + self.potsize
+                return 0.8*fold_chips < call_lose_chips*(1-equity) + call_win_chips*equity
+
+        else: # all three players have chips
             self.stats.getPostFlopWinPct()
             opp_names = self.opp_dict.keys()
+
             skill_a = 0.5
             skill_b = 0.5
 
-            print str(opp_names) + "OPPONENTNAMES\n"
-            print str(self.stats.postFlopWinPct)
+            one_folded = False
 
-            if not self.stats.postFlopWinPct[opp_names[0]] == 0 and self.stats.postFlopWinPct[opp_names[1]] == 0:
-                skill_a = self.stats.postFlopWinPct[opp_names[0]] / (self.stats.postFlopWinPct[opp_names[0]] + self.stats.postFlopWinPct[opp_names[1]])
-                skill_b = self.stats.postFlopWinPct[opp_names[1]] / (self.stats.postFlopWinPct[opp_names[0]] + self.stats.postFlopWinPct[opp_names[1]])
+            for name in self.opp_dict:
+                if self.opp_dict[name].status == FOLDED:
+                    one_folded = True
+                    guy_folded = name
+                else:
+                    guy_active = name
 
-            fold_ew_a      = calc_icm(self.my_stacksize, self.opp_dict[opp_names[0]].stack_size+self.potsize, self.opp_dict[opp_names[1]].stack_size)[0]
-            fold_ew_b      = calc_icm(self.my_stacksize, self.opp_dict[opp_names[0]].stack_size             , self.opp_dict[opp_names[1]].stack_size+self.potsize)[0]
-            fold_ew        = skill_a*fold_ew_a + skill_b*fold_ew_b
+            if one_folded: # one person folded
+                fold_ew = calc_icm(self.my_stacksize, self.opp_dict[guy_active].stack_size+self.potsize, self.opp_dict[guy_folded].stack_size)[0]
+                call_win_ew = calc_icm(self.my_stacksize+self.potsize, self.opp_dict[guy_active].stack_size, self.opp_dict[guy_folded].stack_size)[0]
+                call_lose_ew = calc_icm(self.my_stacksize-self.call_amount, self.opp_dict[guy_active].stack_size+self.potsize+self.call_amount, self.opp_dict[guy_folded].stack_size)[0]
 
-            call_win_ew    = calc_icm(self.my_stacksize+self.potsize, self.opp_dict[opp_names[0]].stack_size, self.opp_dict[opp_names[1]].stack_size)[0]
+            else: # all three are still in hand
+                if self.stats.postFlopCount > 10 and not self.stats.postFlopWinPct[opp_names[0]] == 0 and self.stats.postFlopWinPct[opp_names[1]] == 0:
+                    skill_a = self.stats.postFlopWinPct[opp_names[0]] / (self.stats.postFlopWinPct[opp_names[0]] + self.stats.postFlopWinPct[opp_names[1]])
+                    skill_b = self.stats.postFlopWinPct[opp_names[1]] / (self.stats.postFlopWinPct[opp_names[0]] + self.stats.postFlopWinPct[opp_names[1]])
 
-            call_lose_ew_a = calc_icm(self.my_stacksize-self.call_amount, self.opp_dict[opp_names[0]].stack_size+self.potsize+self.call_amount, self.opp_dict[opp_names[1]].stack_size)[0]
-            call_lose_ew_b = calc_icm(self.my_stacksize-self.call_amount, self.opp_dict[opp_names[0]].stack_size, self.opp_dict[opp_names[1]].stack_size+self.potsize+self.call_amount)[0]
-            call_lose_ew   = skill_a*call_lose_ew_a + skill_b*call_lose_ew_b
+                fold_ew_a      = calc_icm(self.my_stacksize, self.opp_dict[opp_names[0]].stack_size+self.potsize, self.opp_dict[opp_names[1]].stack_size)[0]
+                fold_ew_b      = calc_icm(self.my_stacksize, self.opp_dict[opp_names[0]].stack_size             , self.opp_dict[opp_names[1]].stack_size+self.potsize)[0]
+                fold_ew        = skill_a*fold_ew_a + skill_b*fold_ew_b
+
+                call_win_ew    = calc_icm(self.my_stacksize+self.potsize, self.opp_dict[opp_names[0]].stack_size, self.opp_dict[opp_names[1]].stack_size)[0]
+
+                call_lose_ew_a = calc_icm(self.my_stacksize-self.call_amount, self.opp_dict[opp_names[0]].stack_size+self.potsize+self.call_amount, self.opp_dict[opp_names[1]].stack_size)[0]
+                call_lose_ew_b = calc_icm(self.my_stacksize-self.call_amount, self.opp_dict[opp_names[0]].stack_size, self.opp_dict[opp_names[1]].stack_size+self.potsize+self.call_amount)[0]
+                call_lose_ew   = skill_a*call_lose_ew_a + skill_b*call_lose_ew_b
 
         # logic to determine call/fold
         bitch_factor = BITCH_FACTOR_TABLE[self.num_boardcards]
@@ -361,6 +380,12 @@ class Player:
 
         elif equity > self.raise_thres and (self.is_new_round or do_reraise): 
             winning_factor = ((equity - self.fold_thres) / (1 - self.fold_thres))**POWER
+            if self.num_boardcards == 0:
+                winning_factor = min(0.1, 0.25*winning_factor)
+            elif self.num_boardcards == 3:
+                winning_factor = min(0.25, 0.5*winning_factor)
+            elif self.num_boardcards == 4:
+                winning_factor = min(0.5, winning_factor)
             if BET in avail_actions:
                 amount = self.bet_handler(winning_factor)
                 return BET + ":" + str(amount)
