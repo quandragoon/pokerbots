@@ -28,6 +28,13 @@ OUT    = 1
 ACTIVE = 2 
 
 
+# suits
+SPADE   = "s"
+CLUB    = "c"
+DIAMOND = "d"
+HEART   = "h"
+
+
 # equity threshold
 THREE_FOLD_THRES_TABLE  = {0 : 0.25, 3 : 0.35, 4 : 0.35, 5 : 0.35}
 THREE_RAISE_THRES_TABLE = {0 : 0.6,  3 : 0.6,  4 : 0.6,  5 : 0.6}
@@ -92,6 +99,25 @@ def calc_icm (a, b, c):
 
 
 
+# class Card:
+#     def __init__ (self, string_form):
+#         self.denom = string_form[0]
+#         self.suit  = string_form[1]
+#         self.value = 
+
+
+
+
+# class Hand:
+#     def __init__ (self, string_form):
+#         self.hand
+
+
+
+
+
+
+
 class Opponent:
     def __init__ (self, name):
         self.seat        = 0 # 0, 1, 2
@@ -141,6 +167,17 @@ class Player:
         self.monte_carlo_iter       = MONTE_CARLO_ITER
         self.one_out                = False
 
+        # precomputed equity tables for pre flop
+        self.equity_table_2         = {}
+        self.equity_table_3         = {}
+        with open("precomputed2.txt") as f:
+            for line in f:
+                (key, val) = line.split()
+                self.equity_table_2[key] = float(val)
+        with open("precomputed3.txt") as f:
+            for line in f:
+                (key, val) = line.split()
+                self.equity_table_3[key] = float(val)
 
 
 
@@ -201,7 +238,7 @@ class Player:
 
 
     def newhand_handler(self, received_packet):
-
+        
         self.my_hand = received_packet['hand']
         self.my_seat = received_packet['seat']
         self.list_of_stacksizes = received_packet['stack_size']
@@ -244,6 +281,14 @@ class Player:
     def bet_handler(self, winning_factor):
         a = random.random()
         bet_amount = 0
+
+        # slow play
+        if self.num_boardcards == 0:
+            winning_factor = min(1, winning_factor)
+        elif self.num_boardcards == 3:
+            winning_factor = min(0.5, 0.75*winning_factor)
+        elif self.num_boardcards == 4:
+            winning_factor = min(0.5, winning_factor)
 
         if self.alpha > a: # YOLO
             r = random.random()
@@ -376,20 +421,33 @@ class Player:
             self.is_new_round = True
             self.num_boardcards = received_packet['num_boardcards'] 
 
+        # set thresholds
         if not self.one_out:
             self.fold_thres = THREE_FOLD_THRES_TABLE[self.num_boardcards]
             self.raise_thres = THREE_RAISE_THRES_TABLE[self.num_boardcards]
             self.reraise_thres = THREE_RERAISE_THRES
-            equity = pbots_calc.calc(':'.join([self.my_hand, 'xx', 'xx']), ''.join(received_packet['boardcards']), 
-                "", self.monte_carlo_iter)
         else:
             self.fold_thres = TWO_FOLD_THRES_TABLE[self.num_boardcards]
             self.raise_thres = TWO_RAISE_THRES_TABLE[self.num_boardcards]
             self.reraise_thres = TWO_RERAISE_THRES
-            equity = pbots_calc.calc(':'.join([self.my_hand, 'xx']), ''.join(received_packet['boardcards']), 
-                "", self.monte_carlo_iter)
 
-        equity = equity.ev[0]
+        # see if we could use precomputed equity
+        if self.num_active_players == 3:
+            if self.num_boardcards == 0:
+                equity = self.equity_table_3[self.my_hand]
+            else:
+                equity = pbots_calc.calc(':'.join([self.my_hand, 'xx', 'xx']), ''.join(received_packet['boardcards']), 
+                    "", self.monte_carlo_iter)
+                equity = equity.ev[0]
+        else:
+            if self.num_boardcards == 0:
+                equity = self.equity_table_2[self.my_hand]
+            else:
+                equity = pbots_calc.calc(':'.join([self.my_hand, 'xx']), ''.join(received_packet['boardcards']), 
+                    "", self.monte_carlo_iter)
+                equity = equity.ev[0]
+
+
         do_reraise = random.random() > self.reraise_thres
 
         # print 'EQUITY: ' + str(equity)
@@ -402,12 +460,6 @@ class Player:
 
         elif equity > self.raise_thres and (self.is_new_round or do_reraise): 
             winning_factor = ((equity - self.fold_thres) / (1 - self.fold_thres))**POWER
-            if self.num_boardcards == 0:
-                winning_factor = min(1, winning_factor)
-            elif self.num_boardcards == 3:
-                winning_factor = min(0.5, 0.75*winning_factor)
-            elif self.num_boardcards == 4:
-                winning_factor = min(0.5, winning_factor)
             if BET in avail_actions:
                 amount = self.bet_handler(winning_factor)
                 return BET + ":" + str(amount)
