@@ -47,7 +47,7 @@ POWER = 4
 MONTE_CARLO_ITER = 30000
 DELTA_ITER       = 5000
 # BITCH_FACTOR_TABLE = {0 : 0.75, 3 : 0.8, 4 : 0.9, 5 : 1}
-BITCH_FACTOR_TABLE = {0 : 1, 3 : 1, 4 : 1, 5 : 1}
+BITCH_FACTOR_TABLE = {0 : 0.75, 3 : 1, 4 : 1.1, 5 : 1.2}
 
 
 # print pbots_calc.calc("AhKh:xx", "ThJhQh2s7s", "", 1)
@@ -139,6 +139,7 @@ class Player:
         self.opp_dict               = {}
         self.stats                  = None
         self.monte_carlo_iter       = MONTE_CARLO_ITER
+        self.one_out                = False
 
 
 
@@ -181,7 +182,7 @@ class Player:
         self.opp_dict[self.opponent_2_name] = Opponent(self.opponent_2_name)
 
         self.time_bank       = float(received_packet['timeBank'])
-        self.time_low_thres  = 0.6 * self.time_bank
+        self.time_low_thres  = 0.3 * self.time_bank
         self.time_per_hand   = 2 * self.time_bank / received_packet['num_hands']  
 
         # If we have already played the opponent before, 
@@ -234,9 +235,9 @@ class Player:
                 # update status
                 if self.opp_dict[name].stack_size == 0:
                     self.opp_dict[name].status = OUT
+                    self.one_out = True
                 else:
                     self.opp_dict[name].status = ACTIVE
-
 
 
 
@@ -375,7 +376,7 @@ class Player:
             self.is_new_round = True
             self.num_boardcards = received_packet['num_boardcards'] 
 
-        if received_packet['num_active_players'] == 3:
+        if not self.one_out:
             self.fold_thres = THREE_FOLD_THRES_TABLE[self.num_boardcards]
             self.raise_thres = THREE_RAISE_THRES_TABLE[self.num_boardcards]
             self.reraise_thres = THREE_RERAISE_THRES
