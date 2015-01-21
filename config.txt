@@ -5,7 +5,8 @@ CONNECTION_TIMEOUT = 10
 TIME_RESTRICTION_PER_GAME = 100
 ENFORCE_TIMING_RESTRICTION = false
 DISPLAY_ILLEGAL_ACTIONS = false
-TRIPLICATE = true
+# TRIPLICATE = true
+TRIPLICATE = false
 
 # TYPE can be FOLDER, SOCKET, RANDOM, or CHECKFOLD
 # NAME is the name of bot and determines which persistent datastore the bot
@@ -32,9 +33,9 @@ PLAYER_2_NAME = bot_beta1
 PLAYER_2_RESET_KEYS = false
 
 PLAYER_3_TYPE = FOLDER 
-PLAYER_3_PATH = ./beta2
+PLAYER_3_PATH = ./beta3
 #   PLAYER_1_SCONS_ARGS = 
-PLAYER_3_NAME = bot_beta2
+PLAYER_3_NAME = bot_beta3
 PLAYER_3_RESET_KEYS = false
 
 

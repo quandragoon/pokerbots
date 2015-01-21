@@ -302,6 +302,11 @@ class Player:
         print 'FOLD EW : ' + str(fold_ew) 
         print "CALL EW : " + str(rhs)
         print 'BITCH F : ' + str(bitch_factor)
+        if fold_ew > rhs:
+            if self.num_active_players == 3:
+                print "BITCH3"
+            else:
+                print "BITCH2"
         if lhs < rhs:
             return True
         return False

@@ -43,7 +43,9 @@ POWER = 4
 
 
 
-ITER_TABLE = {0 : 30000, 3 : 30000, 4 : 30000, 5 : 30000}
+# ITER_TABLE = {0 : 30000, 3 : 30000, 4 : 30000, 5 : 30000}
+MONTE_CARLO_ITER = 30000
+DELTA_ITER       = 5000
 BITCH_FACTOR_TABLE = {0 : 0.75, 3 : 0.8, 4 : 0.9, 5 : 1}
 
 
@@ -107,6 +109,9 @@ class Opponent:
 class Player:
 
     def __init__ (self):
+        self.time_low_thres         = 0.0
+        self.time_bank              = 0.0
+        self.time_per_hand          = 0.0
         self.my_name                = ""
         self.opponent_1_name        = ""
         self.opponent_2_name        = ""
@@ -136,6 +141,7 @@ class Player:
         self.potsize                = 0
         self.opp_dict               = {}
         self.stats                  = None
+        self.monte_carlo_iter       = MONTE_CARLO_ITER
 
 
 
@@ -166,6 +172,7 @@ class Player:
 
 
     def newgame_handler(self, received_packet):
+
         self.opponent_1_name = received_packet['opponent_1_name']
         self.opponent_2_name = received_packet['opponent_2_name']
 
@@ -175,6 +182,10 @@ class Player:
 
         self.opp_dict[self.opponent_1_name] = Opponent(self.opponent_1_name)
         self.opp_dict[self.opponent_2_name] = Opponent(self.opponent_2_name)
+
+        self.time_bank       = float(received_packet['timeBank'])
+        self.time_low_thres  = 0.7 * self.time_bank
+        self.time_per_hand   = 2 * self.time_bank / received_packet['num_hands']  
 
         # If we have already played the opponent before, 
         # we load their statistics from the previous encounter
@@ -192,6 +203,7 @@ class Player:
 
 
     def newhand_handler(self, received_packet):
+
         self.my_hand = received_packet['hand']
         self.my_seat = received_packet['seat']
         self.list_of_stacksizes = received_packet['stack_size']
@@ -199,6 +211,22 @@ class Player:
         self.hand_id = received_packet['handID']
         self.num_active_players = received_packet['num_active_players']
         self.list_of_active_players = received_packet['active_players']
+
+        # adjust iterations
+        new_time_bank = float(received_packet['timeBank'])
+        if new_time_bank < self.time_low_thres:
+            self.time_per_hand = self.time_per_hand / 4
+        delta_time = self.time_bank - new_time_bank 
+        if delta_time > self.time_per_hand:
+            self.monte_carlo_iter = max(self.monte_carlo_iter - DELTA_ITER, DELTA_ITER)
+        else:
+            self.monte_carlo_iter = self.monte_carlo_iter + DELTA_ITER
+
+        self.time_bank = new_time_bank
+
+        # print "ITER : " + str(self.monte_carlo_iter)
+        # print "DELTA: " + str(delta_time)
+
 
         names = received_packet['player_names']
         for i in range(len(names)):
@@ -283,8 +311,8 @@ class Player:
             skill_a = 0.5
             skill_b = 0.5
 
-            print str(opp_names) + "OPPONENTNAMES\n"
-            print str(self.stats.postFlopWinPct)
+            # print str(opp_names) + "OPPONENTNAMES\n"
+            # print str(self.stats.postFlopWinPct)
 
             if not self.stats.postFlopWinPct[opp_names[0]] == 0 and self.stats.postFlopWinPct[opp_names[1]] == 0:
                 skill_a = self.stats.postFlopWinPct[opp_names[0]] / (self.stats.postFlopWinPct[opp_names[0]] + self.stats.postFlopWinPct[opp_names[1]])
@@ -302,12 +330,18 @@ class Player:
 
         # logic to determine call/fold
         bitch_factor = BITCH_FACTOR_TABLE[self.num_boardcards]
-        lhs = 0
-        if fold_ew > 0:
-            lhs = fold_ew * bitch_factor
-        else:
-            lhs = fold_ew / bitch_factor
+        # lhs = 0
+        # if fold_ew > 0:
+        #     lhs = fold_ew * bitch_factor
+        # else:
+        #     lhs = fold_ew / bitch_factor
+        lhs = fold_ew
         rhs = equity*call_win_ew + (1-equity)*call_lose_ew
+        # if fold_ew > rhs:
+        #     if self.num_active_players == 3:
+        #         print "BITCH3"
+        #     else:
+        #         print "BITCH2"
 
         # print 'HAND ID : ' + str(self.hand_id)
         # print 'MY HAND : ' + self.my_hand
@@ -340,18 +374,18 @@ class Player:
             self.raise_thres = THREE_RAISE_THRES_TABLE[self.num_boardcards]
             self.reraise_thres = THREE_RERAISE_THRES
             equity = pbots_calc.calc(':'.join([self.my_hand, 'xx', 'xx']), ''.join(received_packet['boardcards']), 
-                "", ITER_TABLE[self.num_boardcards])
+                "", self.monte_carlo_iter)
         else:
             self.fold_thres = TWO_FOLD_THRES_TABLE[self.num_boardcards]
             self.raise_thres = TWO_RAISE_THRES_TABLE[self.num_boardcards]
             self.reraise_thres = TWO_RERAISE_THRES
             equity = pbots_calc.calc(':'.join([self.my_hand, 'xx']), ''.join(received_packet['boardcards']), 
-                "", ITER_TABLE[self.num_boardcards])
+                "", self.monte_carlo_iter)
 
         equity = equity.ev[0]
         do_reraise = random.random() > self.reraise_thres
 
-        print 'EQUITY: ' + str(equity)
+        # print 'EQUITY: ' + str(equity)
 
         if equity < self.fold_thres:
             # TODO: Implement bluffing / call here
@@ -386,13 +420,13 @@ class Player:
 
         # for action in received_packet['last_action']:
         #     split_action = action.split(":")
-        print received_packet
 
         self.stats.updateOpponentStatistics(received_packet, self.hand_id)
 
         self.list_of_stacksizes = received_packet['stack_size']
         self.my_stacksize       = self.list_of_stacksizes[self.my_seat - 1]
         self.potsize            = received_packet['potsize']
+        self.num_active_players = received_packet['num_active_players']
 
         last_actions = received_packet['last_action']
         for act in last_actions:
@@ -489,7 +523,7 @@ class Player:
             # When sending responses, terminate each response with a newline
             # character (\n) or your bot will hang!            
 
-            print data
+            # print data
             
             if received_packet['packet_name'] == "KEYVALUE":
                 self.keyval_handler(received_packet)
