@@ -29,10 +29,10 @@ ACTIVE = 2
 
 
 # equity threshold
-THREE_FOLD_THRES_TABLE  = {0 : 0.25, 3 : 0.3, 4 : 0.35, 5 : 0.35}
-THREE_RAISE_THRES_TABLE = {0 : 0.5,  3 : 0.7, 4 : 0.85, 5 : 0.9}
-TWO_FOLD_THRES_TABLE    = {0 : 0.2,  3 : 0.4, 4 : 0.4 , 5 : 0.4}
-TWO_RAISE_THRES_TABLE   = {0 : 0.75, 3 : 0.8, 4 : 0.9,  5 : 0.9}
+THREE_FOLD_THRES_TABLE  = {0 : 0.25, 3 : 0.35, 4 : 0.35, 5 : 0.35}
+THREE_RAISE_THRES_TABLE = {0 : 0.6,  3 : 0.6,  4 : 0.6,  5 : 0.6}
+TWO_FOLD_THRES_TABLE    = {0 : 0.2,  3 : 0.25,  4 : 0.3, 5 : 0.3}
+TWO_RAISE_THRES_TABLE   = {0 : 0.7,  3 : 0.75, 4 : 0.8,  5 : 0.8}
 
 
 # randomness threshold
@@ -46,16 +46,17 @@ POWER = 4
 # ITER_TABLE = {0 : 30000, 3 : 30000, 4 : 30000, 5 : 30000}
 MONTE_CARLO_ITER = 30000
 DELTA_ITER       = 5000
-BITCH_FACTOR_TABLE = {0 : 0.75, 3 : 0.8, 4 : 0.9, 5 : 1}
+# BITCH_FACTOR_TABLE = {0 : 0.75, 3 : 0.8, 4 : 0.9, 5 : 1}
+BITCH_FACTOR_TABLE = {0 : 1, 3 : 1, 4 : 1, 5 : 1}
 
 
 # print pbots_calc.calc("AhKh:xx", "ThJhQh2s7s", "", 1)
 # print pbots_calc.calc("AhKh:xx:xx", "JhQh2s7s", "", 100)
 
 
-FIRST_PRIZE  = 100
-SECOND_PRIZE = -20
-THIRD_PRIZE  = -80
+FIRST_PRIZE  = 180
+SECOND_PRIZE = 60
+THIRD_PRIZE  = 0
 
 # ICM Helper function
 def calc_icm (a, b, c):
@@ -81,14 +82,10 @@ def calc_icm (a, b, c):
         pa2 = pb1 * (a/(s-b)) + pc1 * (a/(s-c))
         pb2 = pa1 * (b/(s-a)) + pc1 * (b/(s-c))
         pc2 = pa1 * (c/(s-a)) + pb1 * (c/(s-b))
-        
-        pa3 = 1 - pa1 - pa2
-        pb3 = 1 - pb1 - pb2
-        pc3 = 1 - pc1 - pc2
 
-        ewa = pa1 * FIRST_PRIZE + pa2 * SECOND_PRIZE + pa3 * THIRD_PRIZE
-        ewb = pb1 * FIRST_PRIZE + pb2 * SECOND_PRIZE + pb3 * THIRD_PRIZE
-        ewc = pc1 * FIRST_PRIZE + pc2 * SECOND_PRIZE + pc3 * THIRD_PRIZE
+        ewa = pa1 * FIRST_PRIZE + pa2 * SECOND_PRIZE
+        ewb = pb1 * FIRST_PRIZE + pb2 * SECOND_PRIZE
+        ewc = pc1 * FIRST_PRIZE + pc2 * SECOND_PRIZE
 
         return (ewa, ewb, ewc)
 
@@ -184,7 +181,7 @@ class Player:
         self.opp_dict[self.opponent_2_name] = Opponent(self.opponent_2_name)
 
         self.time_bank       = float(received_packet['timeBank'])
-        self.time_low_thres  = 0.7 * self.time_bank
+        self.time_low_thres  = 0.6 * self.time_bank
         self.time_per_hand   = 2 * self.time_bank / received_packet['num_hands']  
 
         # If we have already played the opponent before, 
@@ -349,18 +346,8 @@ class Player:
 
         # logic to determine call/fold
         bitch_factor = BITCH_FACTOR_TABLE[self.num_boardcards]
-        # lhs = 0
-        # if fold_ew > 0:
-        #     lhs = fold_ew * bitch_factor
-        # else:
-        #     lhs = fold_ew / bitch_factor
-        lhs = fold_ew
+        lhs = fold_ew * bitch_factor
         rhs = equity*call_win_ew + (1-equity)*call_lose_ew
-        # if fold_ew > rhs:
-        #     if self.num_active_players == 3:
-        #         print "BITCH3"
-        #     else:
-        #         print "BITCH2"
 
         # print 'HAND ID : ' + str(self.hand_id)
         # print 'MY HAND : ' + self.my_hand
@@ -415,9 +402,9 @@ class Player:
         elif equity > self.raise_thres and (self.is_new_round or do_reraise): 
             winning_factor = ((equity - self.fold_thres) / (1 - self.fold_thres))**POWER
             if self.num_boardcards == 0:
-                winning_factor = min(0.1, 0.25*winning_factor)
+                winning_factor = min(1, winning_factor)
             elif self.num_boardcards == 3:
-                winning_factor = min(0.25, 0.5*winning_factor)
+                winning_factor = min(0.5, 0.75*winning_factor)
             elif self.num_boardcards == 4:
                 winning_factor = min(0.5, winning_factor)
             if BET in avail_actions:
@@ -548,7 +535,8 @@ class Player:
             # When sending responses, terminate each response with a newline
             # character (\n) or your bot will hang!            
 
-            # print data
+            # this print statement is so that the stupid piece of shit Batman won't run into an error
+            print data
             
             if received_packet['packet_name'] == "KEYVALUE":
                 self.keyval_handler(received_packet)

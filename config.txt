@@ -5,8 +5,8 @@ CONNECTION_TIMEOUT = 10
 TIME_RESTRICTION_PER_GAME = 100
 ENFORCE_TIMING_RESTRICTION = false
 DISPLAY_ILLEGAL_ACTIONS = false
-# TRIPLICATE = true
-TRIPLICATE = false
+TRIPLICATE = true
+# TRIPLICATE = false
 
 # TYPE can be FOLDER, SOCKET, RANDOM, or CHECKFOLD
 # NAME is the name of bot and determines which persistent datastore the bot
