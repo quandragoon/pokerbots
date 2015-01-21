@@ -29,10 +29,10 @@ ACTIVE = 2
 
 
 # equity threshold
-THREE_FOLD_THRES    = 0.2
-THREE_RAISE_THRES   = 0.7
-TWO_FOLD_THRES      = 0.2
-TWO_RAISE_THRES     = 0.6
+THREE_FOLD_THRES_TABLE  = {0 : 0.25, 3 : 0.3, 4 : 0.35, 5 : 0.35}
+THREE_RAISE_THRES_TABLE = {0 : 0.5,  3 : 0.7, 4 : 0.85, 5 : 0.9}
+TWO_FOLD_THRES_TABLE    = {0 : 0.2,  3 : 0.4, 4 : 0.4 , 5 : 0.4}
+TWO_RAISE_THRES_TABLE   = {0 : 0.75, 3 : 0.8, 4 : 0.9,  5 : 0.9}
 
 
 # randomness threshold
@@ -125,9 +125,9 @@ class Player:
         self.maxRaise               = 0
         self.my_original_stacksize  = 0
         self.alpha                  = 0.5 # how agressive we are
-        self.fold_thres             = THREE_FOLD_THRES
-        self.reraise_thres          = THREE_RERAISE_THRES
-        self.raise_thres            = THREE_RAISE_THRES
+        self.fold_thres             = 0
+        self.reraise_thres          = 0
+        self.raise_thres            = 0
         self.call_amount            = 0
         self.is_new_round           = True
         self.last_action            = None
@@ -255,9 +255,6 @@ class Player:
 
 
     def should_call (self, equity):
-        opp_stack_sizes = self.list_of_stacksizes
-        del opp_stack_sizes[self.my_seat-1]
-
         fold_ew      = 0
         call_win_ew  = 0
         call_lose_ew = 0
@@ -339,14 +336,14 @@ class Player:
             self.num_boardcards = received_packet['num_boardcards'] 
 
         if received_packet['num_active_players'] == 3:
-            self.fold_thres = THREE_FOLD_THRES
-            self.raise_thres = THREE_RAISE_THRES
+            self.fold_thres = THREE_FOLD_THRES_TABLE[self.num_boardcards]
+            self.raise_thres = THREE_RAISE_THRES_TABLE[self.num_boardcards]
             self.reraise_thres = THREE_RERAISE_THRES
             equity = pbots_calc.calc(':'.join([self.my_hand, 'xx', 'xx']), ''.join(received_packet['boardcards']), 
                 "", ITER_TABLE[self.num_boardcards])
         else:
-            self.fold_thres = TWO_FOLD_THRES
-            self.raise_thres = TWO_RAISE_THRES
+            self.fold_thres = TWO_FOLD_THRES_TABLE[self.num_boardcards]
+            self.raise_thres = TWO_RAISE_THRES_TABLE[self.num_boardcards]
             self.reraise_thres = TWO_RERAISE_THRES
             equity = pbots_calc.calc(':'.join([self.my_hand, 'xx']), ''.join(received_packet['boardcards']), 
                 "", ITER_TABLE[self.num_boardcards])
@@ -354,7 +351,7 @@ class Player:
         equity = equity.ev[0]
         do_reraise = random.random() > self.reraise_thres
 
-        # print 'EQUITY: ' + str(equity)
+        print 'EQUITY: ' + str(equity)
 
         if equity < self.fold_thres:
             # TODO: Implement bluffing / call here
