@@ -36,10 +36,10 @@ HEART   = "h"
 
 
 # equity threshold
-THREE_FOLD_THRES_TABLE  = {0 : 0.25, 3 : 0.35, 4 : 0.35, 5 : 0.35}
-THREE_RAISE_THRES_TABLE = {0 : 0.6,  3 : 0.6,  4 : 0.6,  5 : 0.6}
-TWO_FOLD_THRES_TABLE    = {0 : 0.2,  3 : 0.25,  4 : 0.3, 5 : 0.3}
-TWO_RAISE_THRES_TABLE   = {0 : 0.7,  3 : 0.75, 4 : 0.8,  5 : 0.8}
+THREE_FOLD_THRES_TABLE  = {0 : 0.25, 3 : 0.25, 4 : 0.25, 5 : 0.25}
+THREE_RAISE_THRES_TABLE = {0 : 0.36, 3 : 0.6,  4 : 0.7,  5 : 0.75}
+TWO_FOLD_THRES_TABLE    = {0 : 0.4,  3 : 0.4,  4 : 0.4,  5 : 0.4}
+TWO_RAISE_THRES_TABLE   = {0 : 0.6,  3 : 0.75, 4 : 0.85, 5 : 0.9}
 
 
 # randomness threshold
@@ -395,14 +395,14 @@ class Player:
         lhs = fold_ew * bitch_factor
         rhs = equity*call_win_ew + (1-equity)*call_lose_ew
 
-        # print 'HAND ID : ' + str(self.hand_id)
-        # print 'MY HAND : ' + self.my_hand
-        # print 'MY STACK: ' + str(self.my_stacksize)
-        # print 'POT     : ' + str(self.potsize)
-        # print 'EQUITY  : ' + str(equity)
-        # print 'FOLD EW : ' + str(fold_ew) 
-        # print "CALL EW : " + str(rhs)
-        # print 'BITCH F : ' + str(bitch_factor)
+        print 'HAND ID : ' + str(self.hand_id)
+        print 'MY HAND : ' + self.my_hand
+        print 'MY STACK: ' + str(self.my_stacksize)
+        print 'POT     : ' + str(self.potsize)
+        print 'EQUITY  : ' + str(equity)
+        print 'FOLD EW : ' + str(fold_ew) 
+        print "CALL EW : " + str(rhs)
+        print 'BITCH F : ' + str(bitch_factor)
         if lhs < rhs:
             return True
         return False
@@ -419,20 +419,24 @@ class Player:
             self.is_new_round = False
         else: 
             self.is_new_round = True
-            self.num_boardcards = received_packet['num_boardcards'] 
+        self.num_boardcards = received_packet['num_boardcards'] 
 
         # set thresholds
-        if not self.one_out:
+        # if not self.one_out:
+        #     self.fold_thres = THREE_FOLD_THRES_TABLE[self.num_boardcards]
+        #     self.raise_thres = THREE_RAISE_THRES_TABLE[self.num_boardcards]
+        #     self.reraise_thres = THREE_RERAISE_THRES
+        # else:
+        #     self.fold_thres = TWO_FOLD_THRES_TABLE[self.num_boardcards]
+        #     self.raise_thres = TWO_RAISE_THRES_TABLE[self.num_boardcards]
+        #     self.reraise_thres = TWO_RERAISE_THRES
+
+        # see if we could use precomputed equity
+        print "ACTIVE: " + str(self.num_active_players)
+        if self.num_active_players == 3:
             self.fold_thres = THREE_FOLD_THRES_TABLE[self.num_boardcards]
             self.raise_thres = THREE_RAISE_THRES_TABLE[self.num_boardcards]
             self.reraise_thres = THREE_RERAISE_THRES
-        else:
-            self.fold_thres = TWO_FOLD_THRES_TABLE[self.num_boardcards]
-            self.raise_thres = TWO_RAISE_THRES_TABLE[self.num_boardcards]
-            self.reraise_thres = TWO_RERAISE_THRES
-
-        # see if we could use precomputed equity
-        if self.num_active_players == 3:
             if self.num_boardcards == 0:
                 equity = self.equity_table_3[self.my_hand]
             else:
@@ -440,6 +444,9 @@ class Player:
                     "", self.monte_carlo_iter)
                 equity = equity.ev[0]
         else:
+            self.fold_thres = TWO_FOLD_THRES_TABLE[self.num_boardcards]
+            self.raise_thres = TWO_RAISE_THRES_TABLE[self.num_boardcards]
+            self.reraise_thres = TWO_RERAISE_THRES
             if self.num_boardcards == 0:
                 equity = self.equity_table_2[self.my_hand]
             else:
@@ -450,7 +457,7 @@ class Player:
 
         do_reraise = random.random() > self.reraise_thres
 
-        # print 'EQUITY: ' + str(equity)
+        print 'EQUITY: ' + str(equity)
 
         if equity < self.fold_thres:
             # TODO: Implement bluffing / call here
@@ -459,6 +466,7 @@ class Player:
             return FOLD
 
         elif equity > self.raise_thres and (self.is_new_round or do_reraise): 
+            print 'IN RAISE'
             winning_factor = ((equity - self.fold_thres) / (1 - self.fold_thres))**POWER
             if BET in avail_actions:
                 amount = self.bet_handler(winning_factor)
