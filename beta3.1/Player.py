@@ -37,7 +37,7 @@ HEART   = "h"
 
 # equity threshold
 THREE_FOLD_THRES_TABLE  = {0 : 0.25, 3 : 0.25, 4 : 0.25, 5 : 0.25}
-THREE_RAISE_THRES_TABLE = {0 : 0.36, 3 : 0.6,  4 : 0.75, 5 : 0.8}
+THREE_RAISE_THRES_TABLE = {0 : 0.36, 3 : 0.6,  4 : 0.7,  5 : 0.75}
 TWO_FOLD_THRES_TABLE    = {0 : 0.4,  3 : 0.4,  4 : 0.4,  5 : 0.4}
 TWO_RAISE_THRES_TABLE   = {0 : 0.6,  3 : 0.75, 4 : 0.85, 5 : 0.9}
 
@@ -54,7 +54,7 @@ POWER = 4
 MONTE_CARLO_ITER = 30000
 DELTA_ITER       = 5000
 # BITCH_FACTOR_TABLE = {0 : 0.75, 3 : 0.8, 4 : 0.9, 5 : 1}
-BITCH_FACTOR_TABLE = {0 : 1, 3 : 2, 4 : 2.5, 5 : 3.5}
+BITCH_FACTOR_TABLE = {0 : 1, 3 : 1, 4 : 1.25, 5 : 1.5}
 
 
 # print pbots_calc.calc("AhKh:xx", "ThJhQh2s7s", "", 1)
@@ -68,34 +68,40 @@ THIRD_PRIZE  = 0
 # ICM Helper function
 def calc_icm (a, b, c):
 
-    s = a + b + c
+    s = float(a + b + c)
 
-    if a == s:
-        return (FIRST_PRIZE, SECOND_PRIZE, THIRD_PRIZE)
+    # if a == s:
+    #     return (FIRST_PRIZE, SECOND_PRIZE, THIRD_PRIZE)
 
-    elif b == s:
-        return (THIRD_PRIZE, FIRST_PRIZE, SECOND_PRIZE)
+    # elif b == s:
+    #     return (THIRD_PRIZE, FIRST_PRIZE, SECOND_PRIZE)
 
-    elif c == s:
-        return (THIRD_PRIZE, SECOND_PRIZE, FIRST_PRIZE)
+    # elif c == s:
+    #     return (THIRD_PRIZE, SECOND_PRIZE, FIRST_PRIZE)
 
-    else:
-        s = float(s)
+    # else:
+
+    #   s = float(s)
+
+    '''
+    All cases in which two or more players are all-in 
+    are now handled in the should_call() method.
+
+    '''
+
+    pa1 = a/s
+    pb1 = b/s
+    pc1 = c/s
     
-        pa1 = a/s
-        pb1 = b/s
-        pc1 = c/s
-        
-        pa2 = pb1 * (a/(s-b)) + pc1 * (a/(s-c))
-        pb2 = pa1 * (b/(s-a)) + pc1 * (b/(s-c))
-        pc2 = pa1 * (c/(s-a)) + pb1 * (c/(s-b))
+    pa2 = pb1 * (a/(s-b)) + pc1 * (a/(s-c))
+    pb2 = pa1 * (b/(s-a)) + pc1 * (b/(s-c))
+    pc2 = pa1 * (c/(s-a)) + pb1 * (c/(s-b))
 
-        ewa = pa1 * FIRST_PRIZE + pa2 * SECOND_PRIZE
-        ewb = pb1 * FIRST_PRIZE + pb2 * SECOND_PRIZE
-        ewc = pc1 * FIRST_PRIZE + pc2 * SECOND_PRIZE
+    ewa = pa1 * FIRST_PRIZE + pa2 * SECOND_PRIZE
+    ewb = pb1 * FIRST_PRIZE + pb2 * SECOND_PRIZE
+    ewc = pc1 * FIRST_PRIZE + pc2 * SECOND_PRIZE
 
-        return (ewa, ewb, ewc)
-
+    return (ewa, ewb, ewc)
 
 
 
@@ -114,10 +120,6 @@ def calc_icm (a, b, c):
 
 
 
-
-
-
-
 class Opponent:
     def __init__ (self, name):
         self.seat        = 0 # 0, 1, 2
@@ -125,6 +127,7 @@ class Opponent:
         self.stack_size  = 200
         self.status      = ACTIVE
         self.last_action = None
+        self.original_stacksize = 200
 
 
 
@@ -270,10 +273,10 @@ class Player:
             if name != self.my_name:
                 self.opp_dict[name].seat = i 
                 self.opp_dict[name].stack_size = self.list_of_stacksizes[i]
+                self.opp_dict[name].original_stacksize = self.list_of_stacksizes[i]
                 # update status
-                if (self.opp_dict[name].stack_size == 0 and self.opp_dict[name].status != OUT):
+                if self.opp_dict[name].stack_size == 0:
                     self.opp_dict[name].status = OUT
-                    self.stats.updateHandCount(name, self.hand_id - 1)
                 else:
                     self.opp_dict[name].status = ACTIVE
 
@@ -331,35 +334,26 @@ class Player:
         call_win_ew  = 0
         call_lose_ew = 0
 
-        # should call before the flop
-        if self.num_boardcards == 0 and self.potsize <= 6:
-            return True
-
-        bitch_factor = BITCH_FACTOR_TABLE[self.num_boardcards]
-
         # check if one is out
         guy_active = ""
         guy_folded = ""
+        for name in self.opp_dict:
+            if self.opp_dict[name].status != OUT:
+                guy_active = name
 
-        if self.num_active_players == 2: # heads-up
-            for name in self.opp_dict:
-                if self.opp_dict[name].status == ACTIVE:
-                    guy_active = name
-            
-            other_guy_stacksize = self.opp_dict[guy_active].stack_size
+        if self.num_active_players == 2: #heads-up
+            other_guy_stacksize = self.opp_dict[guy_active].original_stack_size
 
-            if other_guy_stacksize <= 0.05*self.my_stacksize:
+            if other_guy_stacksize <= 0.05*self.my_original_stacksize:
                 return True
 
             else:
                 fold_chips = self.my_stacksize
                 call_lose_chips = self.my_stacksize - self.call_amount
                 call_win_chips = self.my_stacksize + self.potsize
-                print "FOLD CHIPS: " + str(fold_chips * bitch_factor)
+                print "FOLD CHIPS: " + str(fold_chips)
                 print "EXP CHIPS : " + str(call_lose_chips*(1-equity) + call_win_chips*equity)
-                lhs = fold_chips * bitch_factor
-                rhs = call_lose_chips*(1-equity) + call_win_chips*equity
-                return lhs < rhs
+                return fold_chips < call_lose_chips*(1-equity) + call_win_chips*equity
 
         else: # all three players have chips
             self.stats.getPostFlopWinPct()
@@ -391,27 +385,73 @@ class Player:
                 fold_ew_b      = calc_icm(self.my_stacksize, self.opp_dict[opp_names[0]].stack_size             , self.opp_dict[opp_names[1]].stack_size+self.potsize)[0]
                 fold_ew        = skill_a*fold_ew_a + skill_b*fold_ew_b
 
-                call_win_ew    = calc_icm(self.my_stacksize+self.potsize, self.opp_dict[opp_names[0]].stack_size, self.opp_dict[opp_names[1]].stack_size)[0]
+                if self.opp_dict[opp_names[0]].stack_size == 0 and self.opp_dict[opp_names[1]].stack_size == 0:
+                    call_win_ew = 180
+                else:
+                    call_win_ew = calc_icm(self.my_stacksize+self.potsize, self.opp_dict[opp_names[0]].stack_size, self.opp_dict[opp_names[1]].stack_size)[0]
 
-                call_lose_ew_a = calc_icm(self.my_stacksize-self.call_amount, self.opp_dict[opp_names[0]].stack_size+self.potsize+self.call_amount, self.opp_dict[opp_names[1]].stack_size)[0]
-                call_lose_ew_b = calc_icm(self.my_stacksize-self.call_amount, self.opp_dict[opp_names[0]].stack_size, self.opp_dict[opp_names[1]].stack_size+self.potsize+self.call_amount)[0]
+                if self.my_stacksize == self.call_amount: # we are all-in
+                    if self.opp_dict[opp_names[0]].stack_size == 0:
+                        if self.opp_dict[opp_names[1]].stack_size != 0: # only first opponent and us all-in
+                            if self.my_original_stacksize > self.opp_dict[opp_names[0]].original_stacksize:
+                                call_lose_ew_b = 60 # all-in opponent loses (and us)
+                            elif self.my_original_stacksize < self.opp_dict[opp_names[0]].original_stacksize:
+                                call_lose_ew_b = 0 # all-in opponent loses (and us)
+                            else:
+                                call_lose_ew_b = 30 # all-in opponent loses (and us)
+                            call_lose_ew_a = 0 # all-in opponent wins and we lose
+
+                        else: # both opponents all-in
+                            if self.my_original_stacksize > self.opp_dict[opp_names[0]].original_stacksize:
+                                call_lose_ew_b = 60
+                            elif self.my_original_stacksize < self.opp_dict[opp_names[0]].original_stacksize:
+                                call_lose_ew_b = 0
+                            elif self.my_original_stacksize == self.opp_dict[opp_names[0]].original_stacksize:
+                                call_lose_ew_b = 30
+                            if self.my_original_stacksize > self.opp_dict[opp_names[1]].original_stacksize:
+                                call_lose_ew_a = 60
+                            elif self.my_original_stacksize < self.opp_dict[opp_names[1]].original_stacksize:
+                                call_lose_ew_a = 0
+                            elif self.my_original_stacksize == self.opp_dict[opp_names[1]].original_stacksize:
+                                call_lose_ew_a = 30
+
+                    else: 
+                        if self.opp_dict[opp_names[1]].stack_size == 0: # only second opponent and us all-in
+                            if self.my_original_stacksize > self.opp_dict[opp_names[1]].original_stacksize:
+                                call_lose_ew_a = 60
+                            elif self.my_original_stacksize < self.opp_dict[opp_names[1]].original_stacksize:
+                                call_lose_ew_a = 0
+                            else:
+                                call_lose_ew_a = 30
+                            call_lose_ew_b = 0 # all-in opponent wins and we lose
+
+                        else: # only we are all-in
+                            call_lose_ew_a = 0
+                            call_lose_ew_b = 0
+
+                else: # we are not all-in
+                    call_lose_ew_a = calc_icm(self.my_stacksize-self.call_amount, self.opp_dict[opp_names[0]].stack_size+self.potsize+self.call_amount, self.opp_dict[opp_names[1]].stack_size)[0]
+                    call_lose_ew_b = calc_icm(self.my_stacksize-self.call_amount, self.opp_dict[opp_names[0]].stack_size, self.opp_dict[opp_names[1]].stack_size+self.potsize+self.call_amount)[0]
+                
                 call_lose_ew   = skill_a*call_lose_ew_a + skill_b*call_lose_ew_b
 
         # logic to determine call/fold
+        bitch_factor = BITCH_FACTOR_TABLE[self.num_boardcards]
         lhs = fold_ew * bitch_factor
         rhs = equity*call_win_ew + (1-equity)*call_lose_ew
 
-        print 'HAND ID : ' + str(self.hand_id)
-        print 'MY HAND : ' + self.my_hand
-        print 'MY STACK: ' + str(self.my_stacksize)
-        print 'POT     : ' + str(self.potsize)
-        print 'EQUITY  : ' + str(equity)
-        print 'FOLD EW : ' + str(fold_ew) 
-        print "CALL EW : " + str(rhs)
-        print 'BITCH F : ' + str(bitch_factor)
+        # print 'HAND ID : ' + str(self.hand_id)
+        # print 'MY HAND : ' + self.my_hand
+        # print 'MY STACK: ' + str(self.my_stacksize)
+        # print 'POT     : ' + str(self.potsize)
+        # print 'EQUITY  : ' + str(equity)
+        # print 'FOLD EW : ' + str(fold_ew) 
+        # print "CALL EW : " + str(rhs)
+        # print 'BITCH F : ' + str(bitch_factor)
         if lhs < rhs:
             return True
         return False
+
 
 
 
