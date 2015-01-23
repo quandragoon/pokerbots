@@ -66,14 +66,17 @@ class Statistician:
 		# Average Hand Equity for each opponent
 		self.numActivePlayersPreFlop = 0
 		self.reachedShowdown = {self.opp1_name: False, self.opp2_name: False}
-		self.opponentHands = {self.opp1_name : "xx", self.opp2_name: "xx"}
+		# self.opponentHands = {self.opp1_name : "xx", self.opp2_name: "xx"} <--------- don't think we need this
 		self.equity_table_2 = {}
 		self.equity_table_3 = {}
 		self.equityTotalPreFlop = {self.opp1_name : 0, self.opp2_name : 0}
+		self.equityTotalFlop = {self.opp1_name : 0, self.opp2_name : 0}
+		self.equityTotalTurn = {self.opp1_name : 0, self.opp2_name : 0}
+		self.equityTotalRiver = {self.opp1_name : 0, self.opp2_name : 0}
 		self.AverageEquityPreFlop = {self.opp1_name : 0, self.opp2_name : 0}
-		# self.AverageEquityFlop = {self.opp1_name : 0, self.opp2_name : 0}
-		# self.AverageEquityTurn = {self.opp1_name : 0, self.opp2_name : 0}
-		# self.AverageEquityRiver = {self.opp1_name : 0, self.opp2_name : 0}
+		self.AverageEquityFlop = {self.opp1_name : 0, self.opp2_name : 0}
+		self.AverageEquityTurn = {self.opp1_name : 0, self.opp2_name : 0}
+		self.AverageEquityRiver = {self.opp1_name : 0, self.opp2_name : 0}
 
 	def getNumActivePlayers(self, num_active):
 		self.numActivePlayersPreFlop = num_active
@@ -292,9 +295,33 @@ class Statistician:
 					
 					elif last_action_split[0] == SHOW:
 						self.reachedShowdown[opponent_name] = True
-						self.opponentHands[opponent_name] = last_action_split[1] + last_action_split[2]
-						# boardcards = received_packet['boardcards']
 						self.showdownCount[opponent_name] += 1
+
+						'''
+						THE METHODS TO UPDATE AVG HAND EQUITY FOR OPPONENTS 
+						WILL BE CALLED HERE. THIS IS BECAUSE THEY SHOULD ONLY
+						BE CALLED IF THERE IS A SHOWDOWN. HOWEVER, HOW DO WE 
+						FIGURE OUT HOW MANY ACTIVE PLAYERS THERE ARE????????
+
+						EASY WAY: USE THE NUMBER OF ACTIVE PLAYERS REMAINING
+							      AT SHOWDOWN AS THE PARAMETER THROUGHOUT
+							      PREFLOP, FLOP, TURN, AND RIVER
+						HARD WAY: SOMEHOW KEEP TRACK OF THE NUMBER OF ACTIVE 
+								  PLAYERS THROUGHOUT THE HAND AND INSERT THE
+								  CORRECT NUMBER FOR PREFLOP, FLOP, etc.
+
+						'''
+
+						hand = last_action_split[1] + last_action_split[2]
+						boardcards = received_packet['boardcards']
+
+						# TODO: get an appropriate value for active_players
+
+						# self.calculateAvgEquityPreFlop(opponent_name, hand, active_players)
+						# self.calculateAvgEquityFlop(opponent_name, hand, active_players, boardcards[0:3])
+						# self.calculateAvgEquityTurn(opponent_name, hand, active_players, boardcards[0:4])
+						# self.calculateAvgEquityRiver(opponent_name, hand, active_players, boardcards)
+
 			
 			self.calculateAvgEquityPreFlop(self.numActivePlayersPreFlop)
 
@@ -304,7 +331,7 @@ class Statistician:
 			self.playerSeenFlop = False
 			self.pfrBoolean = {self.opp1_name : False, self.opp2_name : False}
 			self.reachedShowdown = {self.opp1_name: False, self.opp2_name: False}
-			self.opponentHands = {self.opp1_name : "xx", self.opp2_name: "xx"}
+			# self.opponentHands = {self.opp1_name : "xx", self.opp2_name: "xx"} <------ not needed
 			self.numActivePlayersPreFlop = 0
 
 	def getPostFlopWinPct(self):
@@ -346,29 +373,49 @@ class Statistician:
 		pass
 
 	def getAggressionPercent():
-		#Raise + Bet/ Bets + Raise + Call + Check
-		pass
+		self.aggressionFactor[self.opp1_name] = float(self.raiseCount[self.opp1_name] + self.betCount[self.opp1_name]) / 
+		(self.raiseCount[self.opp1_name] + self.betCount[self.opp1_name] + self.callCount[self.opp1_name] 
+			+ self.checkCount[self.opp1_name] + self.foldCount[self.opp1_name])
+
+		self.aggressionFactor[self.opp2_name] = float(self.raiseCount[self.opp2_name] + self.betCount[self.opp2_name]) / 
+		(self.raiseCount[self.opp2_name] + self.betCount[self.opp2_name] + self.callCount[self.opp2_name] 
+			+ self.checkCount[self.opp2_name] + self.foldCount[self.opp2_name])
+		
 
 	def getVPIPPercent():
 		pass
 
-	def calculateAvgEquityPreFlop(self, active_players):
-		for opponent_name in [self.opp1_name, self.opp2_name]:
-			if self.reachedShowdown[opponent_name]:
-				if active_players == 2:
-					self.equityTotalPreFlop[opponent_name] += self.equity_table_2[self.opponentHands[opponent_name]]
-					self.AverageEquityPreFlop[opponent_name] = self.equityTotalPreFlop[opponent_name]/ float(self.showdownCount[opponent_name])
-				else:
-					self.equityTotalPreFlop[opponent_name] += self.equity_table_3[self.opponentHands[opponent_name]]
-					self.AverageEquityPreFlop[opponent_name] = self.equityTotalPreFlop[opponent_name]/ float(self.showdownCount[opponent_name])
-	def calculateAvgEquityFlop(self, active_players):
-		pass
+	def calculateAvgEquityPreFlop(self, opponent_name, hand, active_players):
+		if active_players == 2:
+			self.equityTotalPreFlop[opponent_name] += self.equity_table_2[hand]
+			self.AverageEquityPreFlop[opponent_name] = self.equityTotalPreFlop[opponent_name]/ float(self.showdownCount[opponent_name])
+		else:
+			self.equityTotalPreFlop[opponent_name] += self.equity_table_3[hand]
+			self.AverageEquityPreFlop[opponent_name] = self.equityTotalPreFlop[opponent_name]/ float(self.showdownCount[opponent_name])
 
-	def calculateAvgEquityTurn(self, active_players):
-		pass
+	def calculateAvgEquityFlop(self, opponent_name, hand, active_players, cards):
+		if active_players == 2:
+			self.equityTotalFlop[opponent_name] += pbots_calc.calc(':'.join([hand, 'xx']), ''.join(cards), "", 1000) # idk how many iters
+			self.AverageEquityFlop[opponent_name] = self.equityTotalFlop[opponent_name]/ float(self.showdownCount[opponent_name])
+		else:
+			self.equityTotalFlop[opponent_name] += pbots_calc.calc(':'.join([hand, 'xx', 'xx']), ''.join(cards), "", 1000) # how many iters doe
+			self.AverageEquityFlop[opponent_name] = self.equityTotalFlop[opponent_name]/ float(self.showdownCount[opponent_name])
 
-	def calculateAvgEquityRiver(self, active_players):
-		pass
+	def calculateAvgEquityTurn(self, opponent_name, hand, active_players, cards):
+		if active_players == 2:
+			self.equityTotalTurn[opponent_name] += pbots_calc.calc(':'.join([hand, 'xx']), ''.join(cards), "", 1000) # idk how many iters
+			self.AverageEquityTurn[opponent_name] = self.equityTotalTurn[opponent_name]/ float(self.showdownCount[opponent_name])
+		else:
+			self.equityTotalTurn[opponent_name] += pbots_calc.calc(':'.join([hand, 'xx', 'xx']), ''.join(cards), "", 1000) # how many iters doe
+			self.AverageEquityTurn[opponent_name] = self.equityTotalTurn[opponent_name]/ float(self.showdownCount[opponent_name])
+
+	def calculateAvgEquityRiver(self, opponent_name, hand, active_players, cards):
+		if active_players == 2:
+			self.equityTotalRiver[opponent_name] += pbots_calc.calc(':'.join([hand, 'xx']), ''.join(cards), "", 1000) # idk how many iters
+			self.AverageEquityRiver[opponent_name] = self.equityTotalRiver[opponent_name]/ float(self.showdownCount[opponent_name])
+		else:
+			self.equityTotalRiver[opponent_name] += pbots_calc.calc(':'.join([hand, 'xx', 'xx']), ''.join(cards), "", 1000) # how many iters doe
+			self.AverageEquityRiver[opponent_name] = self.equityTotalRiver[opponent_name]/ float(self.showdownCount[opponent_name])
 
 
 
