@@ -37,7 +37,7 @@ HEART   = "h"
 
 # equity threshold
 THREE_FOLD_THRES_TABLE  = {0 : 0.25, 3 : 0.25, 4 : 0.25, 5 : 0.25}
-THREE_RAISE_THRES_TABLE = {0 : 0.36, 3 : 0.6,  4 : 0.7,  5 : 0.75}
+THREE_RAISE_THRES_TABLE = {0 : 0.36, 3 : 0.6,  4 : 0.75, 5 : 0.8}
 TWO_FOLD_THRES_TABLE    = {0 : 0.4,  3 : 0.4,  4 : 0.4,  5 : 0.4}
 TWO_RAISE_THRES_TABLE   = {0 : 0.6,  3 : 0.75, 4 : 0.85, 5 : 0.9}
 
@@ -54,7 +54,7 @@ POWER = 4
 MONTE_CARLO_ITER = 30000
 DELTA_ITER       = 5000
 # BITCH_FACTOR_TABLE = {0 : 0.75, 3 : 0.8, 4 : 0.9, 5 : 1}
-BITCH_FACTOR_TABLE = {0 : 1, 3 : 1, 4 : 1.25, 5 : 1.5}
+BITCH_FACTOR_TABLE = {0 : 1, 3 : 2, 4 : 2.5, 5 : 3.5}
 
 
 # print pbots_calc.calc("AhKh:xx", "ThJhQh2s7s", "", 1)
@@ -334,15 +334,22 @@ class Player:
         call_win_ew  = 0
         call_lose_ew = 0
 
+        # should call before the flop
+        if self.num_boardcards == 0 and self.potsize <= 6:
+            return True
+
+        bitch_factor = BITCH_FACTOR_TABLE[self.num_boardcards]
+
         # check if one is out
         guy_active = ""
         guy_folded = ""
-        for name in self.opp_dict:
-            if self.opp_dict[name].status != OUT:
-                guy_active = name
 
         if self.num_active_players == 2: #heads-up
-            other_guy_stacksize = self.opp_dict[guy_active].original_stack_size
+            for name in self.opp_dict:
+                if self.opp_dict[name].status == ACTIVE:
+                    guy_active = name
+
+            other_guy_stacksize = self.opp_dict[guy_active].original_stacksize
 
             if other_guy_stacksize <= 0.05*self.my_original_stacksize:
                 return True
@@ -351,9 +358,11 @@ class Player:
                 fold_chips = self.my_stacksize
                 call_lose_chips = self.my_stacksize - self.call_amount
                 call_win_chips = self.my_stacksize + self.potsize
-                print "FOLD CHIPS: " + str(fold_chips)
+                print "FOLD CHIPS: " + str(fold_chips * bitch_factor)
                 print "EXP CHIPS : " + str(call_lose_chips*(1-equity) + call_win_chips*equity)
-                return fold_chips < call_lose_chips*(1-equity) + call_win_chips*equity
+                lhs = fold_chips * bitch_factor
+                rhs = call_lose_chips*(1-equity) + call_win_chips*equity
+                return lhs < rhs
 
         else: # all three players have chips
             self.stats.getPostFlopWinPct()
