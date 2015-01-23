@@ -36,10 +36,10 @@ HEART   = "h"
 
 
 # equity threshold
-THREE_FOLD_THRES_TABLE  = {0 : 0.25, 3 : 0.35, 4 : 0.35, 5 : 0.35}
-THREE_RAISE_THRES_TABLE = {0 : 0.6,  3 : 0.6,  4 : 0.6,  5 : 0.6}
-TWO_FOLD_THRES_TABLE    = {0 : 0.2,  3 : 0.25,  4 : 0.3, 5 : 0.3}
-TWO_RAISE_THRES_TABLE   = {0 : 0.7,  3 : 0.75, 4 : 0.8,  5 : 0.8}
+THREE_FOLD_THRES_TABLE  = {0 : 0.25, 3 : 0.25, 4 : 0.25, 5 : 0.25}
+THREE_RAISE_THRES_TABLE = {0 : 0.36, 3 : 0.6,  4 : 0.7,  5 : 0.75}
+TWO_FOLD_THRES_TABLE    = {0 : 0.4,  3 : 0.4,  4 : 0.4,  5 : 0.4}
+TWO_RAISE_THRES_TABLE   = {0 : 0.6,  3 : 0.75, 4 : 0.85, 5 : 0.9}
 
 
 # randomness threshold
@@ -54,7 +54,7 @@ POWER = 4
 MONTE_CARLO_ITER = 30000
 DELTA_ITER       = 5000
 # BITCH_FACTOR_TABLE = {0 : 0.75, 3 : 0.8, 4 : 0.9, 5 : 1}
-BITCH_FACTOR_TABLE = {0 : 0.75, 3 : 1, 4 : 1.1, 5 : 1.2}
+BITCH_FACTOR_TABLE = {0 : 1, 3 : 1, 4 : 1.25, 5 : 1.5}
 
 
 # print pbots_calc.calc("AhKh:xx", "ThJhQh2s7s", "", 1)
@@ -165,7 +165,7 @@ class Player:
         self.opp_dict               = {}
         self.stats                  = None
         self.monte_carlo_iter       = MONTE_CARLO_ITER
-        self.one_out                = False
+        self.one_folded             = False
 
         # precomputed equity tables for pre flop
         self.equity_table_2         = {}
@@ -262,6 +262,7 @@ class Player:
         # print "ITER : " + str(self.monte_carlo_iter)
         # print "DELTA: " + str(delta_time)
 
+        self.one_folded = False
 
         names = received_packet['player_names']
         for i in range(len(names)):
@@ -272,7 +273,6 @@ class Player:
                 # update status
                 if self.opp_dict[name].stack_size == 0:
                     self.opp_dict[name].status = OUT
-                    self.one_out = True
                 else:
                     self.opp_dict[name].status = ACTIVE
 
@@ -331,18 +331,13 @@ class Player:
         call_lose_ew = 0
 
         # check if one is out
-        one_out = False
-        guy_out = ""
         guy_active = ""
         guy_folded = ""
         for name in self.opp_dict:
-            if self.opp_dict[name].status == OUT:
-                one_out = True
-                guy_out = name
-            else:
+            if self.opp_dict[name].status != OUT:
                 guy_active = name
 
-        if one_out: #heads-up
+        if self.num_active_players == 2: #heads-up
             other_guy_stacksize = self.opp_dict[guy_active].stack_size
 
             if other_guy_stacksize <= 0.05*self.my_stacksize:
@@ -352,7 +347,9 @@ class Player:
                 fold_chips = self.my_stacksize
                 call_lose_chips = self.my_stacksize - self.call_amount
                 call_win_chips = self.my_stacksize + self.potsize
-                return 0.8*fold_chips < call_lose_chips*(1-equity) + call_win_chips*equity
+                print "FOLD CHIPS: " + str(fold_chips)
+                print "EXP CHIPS : " + str(call_lose_chips*(1-equity) + call_win_chips*equity)
+                return fold_chips < call_lose_chips*(1-equity) + call_win_chips*equity
 
         else: # all three players have chips
             self.stats.getPostFlopWinPct()
@@ -395,14 +392,14 @@ class Player:
         lhs = fold_ew * bitch_factor
         rhs = equity*call_win_ew + (1-equity)*call_lose_ew
 
-        # print 'HAND ID : ' + str(self.hand_id)
-        # print 'MY HAND : ' + self.my_hand
-        # print 'MY STACK: ' + str(self.my_stacksize)
-        # print 'POT     : ' + str(self.potsize)
-        # print 'EQUITY  : ' + str(equity)
-        # print 'FOLD EW : ' + str(fold_ew) 
-        # print "CALL EW : " + str(rhs)
-        # print 'BITCH F : ' + str(bitch_factor)
+        print 'HAND ID : ' + str(self.hand_id)
+        print 'MY HAND : ' + self.my_hand
+        print 'MY STACK: ' + str(self.my_stacksize)
+        print 'POT     : ' + str(self.potsize)
+        print 'EQUITY  : ' + str(equity)
+        print 'FOLD EW : ' + str(fold_ew) 
+        print "CALL EW : " + str(rhs)
+        print 'BITCH F : ' + str(bitch_factor)
         if lhs < rhs:
             return True
         return False
@@ -419,38 +416,46 @@ class Player:
             self.is_new_round = False
         else: 
             self.is_new_round = True
-            self.num_boardcards = received_packet['num_boardcards'] 
+        self.num_boardcards = received_packet['num_boardcards'] 
 
         # set thresholds
-        if not self.one_out:
-            self.fold_thres = THREE_FOLD_THRES_TABLE[self.num_boardcards]
-            self.raise_thres = THREE_RAISE_THRES_TABLE[self.num_boardcards]
-            self.reraise_thres = THREE_RERAISE_THRES
-        else:
+        # if not self.one_out:
+        #     self.fold_thres = THREE_FOLD_THRES_TABLE[self.num_boardcards]
+        #     self.raise_thres = THREE_RAISE_THRES_TABLE[self.num_boardcards]
+        #     self.reraise_thres = THREE_RERAISE_THRES
+        # else:
+        #     self.fold_thres = TWO_FOLD_THRES_TABLE[self.num_boardcards]
+        #     self.raise_thres = TWO_RAISE_THRES_TABLE[self.num_boardcards]
+        #     self.reraise_thres = TWO_RERAISE_THRES
+
+        # see if we could use precomputed equity
+
+        if self.num_active_players == 2 or self.one_folded == True:
             self.fold_thres = TWO_FOLD_THRES_TABLE[self.num_boardcards]
             self.raise_thres = TWO_RAISE_THRES_TABLE[self.num_boardcards]
             self.reraise_thres = TWO_RERAISE_THRES
-
-        # see if we could use precomputed equity
-        if self.num_active_players == 3:
-            if self.num_boardcards == 0:
-                equity = self.equity_table_3[self.my_hand]
-            else:
-                equity = pbots_calc.calc(':'.join([self.my_hand, 'xx', 'xx']), ''.join(received_packet['boardcards']), 
-                    "", self.monte_carlo_iter)
-                equity = equity.ev[0]
-        else:
             if self.num_boardcards == 0:
                 equity = self.equity_table_2[self.my_hand]
             else:
                 equity = pbots_calc.calc(':'.join([self.my_hand, 'xx']), ''.join(received_packet['boardcards']), 
                     "", self.monte_carlo_iter)
                 equity = equity.ev[0]
+        else:
+            self.fold_thres = THREE_FOLD_THRES_TABLE[self.num_boardcards]
+            self.raise_thres = THREE_RAISE_THRES_TABLE[self.num_boardcards]
+            self.reraise_thres = THREE_RERAISE_THRES
+            if self.num_boardcards == 0:
+                equity = self.equity_table_3[self.my_hand]
+            else:
+                equity = pbots_calc.calc(':'.join([self.my_hand, 'xx', 'xx']), ''.join(received_packet['boardcards']), 
+                    "", self.monte_carlo_iter)
+                equity = equity.ev[0]
+
 
 
         do_reraise = random.random() > self.reraise_thres
 
-        # print 'EQUITY: ' + str(equity)
+        print 'EQUITY: ' + str(equity)
 
         if equity < self.fold_thres:
             # TODO: Implement bluffing / call here
@@ -501,6 +506,7 @@ class Player:
                 self.opp_dict[name].last_action = sp[0]
                 if sp[0] == FOLD:
                     self.opp_dict[name].status = FOLDED
+                    self.one_folded = True
 
         for name in self.opp_dict:
             self.opp_dict[name].stack_size = self.list_of_stacksizes[self.opp_dict[name].seat]

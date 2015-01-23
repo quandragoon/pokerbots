@@ -1,7 +1,7 @@
 import pbots_calc
 
-NUM_ITER_2 = 10000
-NUM_ITER_3 = 10000
+NUM_ITER_2 = 1000000
+NUM_ITER_3 = 1000000
 
 
 cards = ["Ah", "Ad", "Ac", "As",
@@ -22,15 +22,21 @@ cards = ["Ah", "Ad", "Ac", "As",
 f2 = open('precomputed2.txt', 'w')
 f3 = open('precomputed3.txt', 'w')
 
+processed = []
+
 for c1 in cards:
 	for c2 in cards:
 		if c1 != c2:
 			hand = c1+c2
+			if hand in processed:
+				continue
 			equity2 = pbots_calc.calc(hand + ":xx", "", "", NUM_ITER_2)
 			equity3 = pbots_calc.calc(hand + ":xx:xx", "", "", NUM_ITER_3)
+			processed.append(hand)
 			f2.write(hand + ' ' + str(equity2.ev[0]) + '\n')
 			f3.write(hand + ' ' + str(equity3.ev[0]) + '\n')
 			hand = c2+c1
+			processed.append(hand)
 			f2.write(hand + ' ' + str(equity2.ev[0]) + '\n')
 			f3.write(hand + ' ' + str(equity3.ev[0]) + '\n')
 
