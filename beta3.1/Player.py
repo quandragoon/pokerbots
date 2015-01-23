@@ -120,10 +120,6 @@ def calc_icm (a, b, c):
 
 
 
-
-
-
-
 class Opponent:
     def __init__ (self, name):
         self.seat        = 0 # 0, 1, 2
@@ -346,9 +342,9 @@ class Player:
                 guy_active = name
 
         if self.num_active_players == 2: #heads-up
-            other_guy_stacksize = self.opp_dict[guy_active].stack_size
+            other_guy_stacksize = self.opp_dict[guy_active].original_stack_size
 
-            if other_guy_stacksize <= 0.05*self.my_stacksize:
+            if other_guy_stacksize <= 0.05*self.my_original_stacksize:
                 return True
 
             else:
