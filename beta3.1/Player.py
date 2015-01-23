@@ -54,7 +54,7 @@ POWER = 4
 MONTE_CARLO_ITER = 30000
 DELTA_ITER       = 5000
 # BITCH_FACTOR_TABLE = {0 : 0.75, 3 : 0.8, 4 : 0.9, 5 : 1}
-BITCH_FACTOR_TABLE = {0 : 1, 3 : 2, 4 : 2.5, 5 : 3.5}
+BITCH_FACTOR_TABLE = {0 : 1, 3 : 2, 4 : 2.5, 5 : 3}
 
 
 # print pbots_calc.calc("AhKh:xx", "ThJhQh2s7s", "", 1)
@@ -395,7 +395,7 @@ class Player:
                 fold_ew        = skill_a*fold_ew_a + skill_b*fold_ew_b
 
                 if self.opp_dict[opp_names[0]].stack_size == 0 and self.opp_dict[opp_names[1]].stack_size == 0:
-                    call_win_ew = 180
+                    call_win_ew = FIRST_PRIZE
                 else:
                     call_win_ew = calc_icm(self.my_stacksize+self.potsize, self.opp_dict[opp_names[0]].stack_size, self.opp_dict[opp_names[1]].stack_size)[0]
 
@@ -403,46 +403,45 @@ class Player:
                     if self.opp_dict[opp_names[0]].stack_size == 0:
                         if self.opp_dict[opp_names[1]].stack_size != 0: # only first opponent and us all-in
                             if self.my_original_stacksize > self.opp_dict[opp_names[0]].original_stacksize:
-                                call_lose_ew_b = 60 # all-in opponent loses (and us)
+                                call_lose_ew_b = SECOND_PRIZE # all-in opponent loses (and us)
                             elif self.my_original_stacksize < self.opp_dict[opp_names[0]].original_stacksize:
-                                call_lose_ew_b = 0 # all-in opponent loses (and us)
+                                call_lose_ew_b = THIRD_PRIZE # all-in opponent loses (and us)
                             else:
-                                call_lose_ew_b = 30 # all-in opponent loses (and us)
+                                call_lose_ew_b = SECOND_PRIZE / 2 # all-in opponent loses (and us)
                             call_lose_ew_a = 0 # all-in opponent wins and we lose
 
                         else: # both opponents all-in
                             if self.my_original_stacksize > self.opp_dict[opp_names[0]].original_stacksize:
-                                call_lose_ew_b = 60
+                                call_lose_ew_b = SECOND_PRIZE
                             elif self.my_original_stacksize < self.opp_dict[opp_names[0]].original_stacksize:
                                 call_lose_ew_b = 0
                             elif self.my_original_stacksize == self.opp_dict[opp_names[0]].original_stacksize:
-                                call_lose_ew_b = 30
+                                call_lose_ew_b = SECOND_PRIZE / 2
                             if self.my_original_stacksize > self.opp_dict[opp_names[1]].original_stacksize:
-                                call_lose_ew_a = 60
+                                call_lose_ew_a = SECOND_PRIZE
                             elif self.my_original_stacksize < self.opp_dict[opp_names[1]].original_stacksize:
                                 call_lose_ew_a = 0
                             elif self.my_original_stacksize == self.opp_dict[opp_names[1]].original_stacksize:
-                                call_lose_ew_a = 30
+                                call_lose_ew_a = SECOND_PRIZE / 2
 
-                    else: 
-                        if self.opp_dict[opp_names[1]].stack_size == 0: # only second opponent and us all-in
-                            if self.my_original_stacksize > self.opp_dict[opp_names[1]].original_stacksize:
-                                call_lose_ew_a = 60
-                            elif self.my_original_stacksize < self.opp_dict[opp_names[1]].original_stacksize:
-                                call_lose_ew_a = 0
-                            else:
-                                call_lose_ew_a = 30
-                            call_lose_ew_b = 0 # all-in opponent wins and we lose
-
-                        else: # only we are all-in
+                    elif self.opp_dict[opp_names[1]].stack_size == 0: # only second opponent and us all-in
+                        if self.my_original_stacksize > self.opp_dict[opp_names[1]].original_stacksize:
+                            call_lose_ew_a = SECOND_PRIZE
+                        elif self.my_original_stacksize < self.opp_dict[opp_names[1]].original_stacksize:
                             call_lose_ew_a = 0
-                            call_lose_ew_b = 0
+                        else:
+                            call_lose_ew_a = SECOND_PRIZE / 2
+                        call_lose_ew_b = 0 # all-in opponent wins and we lose
+
+                    else: # only we are all-in
+                        call_lose_ew_a = 0
+                        call_lose_ew_b = 0
 
                 else: # we are not all-in
                     call_lose_ew_a = calc_icm(self.my_stacksize-self.call_amount, self.opp_dict[opp_names[0]].stack_size+self.potsize+self.call_amount, self.opp_dict[opp_names[1]].stack_size)[0]
                     call_lose_ew_b = calc_icm(self.my_stacksize-self.call_amount, self.opp_dict[opp_names[0]].stack_size, self.opp_dict[opp_names[1]].stack_size+self.potsize+self.call_amount)[0]
                 
-                call_lose_ew   = skill_a*call_lose_ew_a + skill_b*call_lose_ew_b
+                call_lose_ew = skill_a*call_lose_ew_a + skill_b*call_lose_ew_b
 
         # logic to determine call/fold
         bitch_factor = BITCH_FACTOR_TABLE[self.num_boardcards]
