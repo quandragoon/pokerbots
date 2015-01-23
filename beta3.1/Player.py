@@ -526,8 +526,11 @@ class Player:
                 amount = self.bet_handler(winning_factor)
                 return BET + ":" + str(amount)
             elif RAISE in avail_actions:
-                amount = self.raise_handler(winning_factor)
-                return RAISE + ":" + str(amount)
+                if self.should_call(equity):
+                    amount = self.raise_handler(winning_factor)
+                    return RAISE + ":" + str(amount)
+                else:
+                    return FOLD
         
         if CALL in avail_actions: 
             if self.should_call(equity):
