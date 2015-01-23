@@ -271,8 +271,9 @@ class Player:
                 self.opp_dict[name].seat = i 
                 self.opp_dict[name].stack_size = self.list_of_stacksizes[i]
                 # update status
-                if self.opp_dict[name].stack_size == 0:
+                if (self.opp_dict[name].stack_size == 0 and self.opp_dict[name].status != OUT):
                     self.opp_dict[name].status = OUT
+                    self.stats.updateHandCount(name, self.hand_id - 1)
                 else:
                     self.opp_dict[name].status = ACTIVE
 
@@ -491,8 +492,6 @@ class Player:
         # for action in received_packet['last_action']:
         #     split_action = action.split(":")
 
-        self.stats.updateOpponentStatistics(received_packet, self.hand_id)
-
         self.list_of_stacksizes = received_packet['stack_size']
         self.my_stacksize       = self.list_of_stacksizes[self.my_seat - 1]
         self.potsize            = received_packet['potsize']
@@ -533,6 +532,7 @@ class Player:
 
         avail_actions = [(e.split(":"))[0] for e in received_packet['legal_actions']]
         action = self.get_best_action (received_packet, avail_actions)
+        self.stats.updateOpponentStatistics(received_packet, self.hand_id, action)
         s.send(action + "\n")
 
 
@@ -558,13 +558,12 @@ class Player:
 
 
     def handover_handler(self, received_packet):
-        self.stats.updateOpponentStatistics(received_packet, self.hand_id)
+        self.stats.updateOpponentStatistics(received_packet, self.hand_id, "")
 
     def requestkeyvalue_handler(self, received_packet):
         # At the end, the engine will allow your bot save key/value pairs.
         # Send FINISH to indicate you're done.
-        # s.send("PUT quan sucks\n")
-        # s.send("PUT samarth best\n")
+        self.stats.compileMatchStatistics(self.hand_id)
         s.send("FINISH\n")
 
 
