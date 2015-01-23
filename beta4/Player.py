@@ -278,8 +278,9 @@ class Player:
                 self.opp_dict[name].stack_size = self.list_of_stacksizes[i]
                 self.opp_dict[name].original_stacksize = self.list_of_stacksizes[i]
                 # update status
-                if self.opp_dict[name].stack_size == 0:
+                if (self.opp_dict[name].stack_size == 0 and self.opp_dict[name].status != OUT):
                     self.opp_dict[name].status = OUT
+                    self.stats.updateHandCount(name, self.hand_id - 1)
                 else:
                     self.opp_dict[name].status = ACTIVE
 
