@@ -49,7 +49,7 @@ class Statistician:
 		self.playerSeenRiver = False
 		self.playerSeenShowdown = False
 		# Determine how many times each opponent goes to Flop
-		self.aggressionPercent = {self.opp1_name : 0, self.opp2_name : 0}
+		# self.aggressionPercent = {self.opp1_name : 0, self.opp2_name : 0}
 		self.raiseCount = {self.opp1_name : 0, self.opp2_name : 0}
 		self.betCount = {self.opp1_name : 0, self.opp2_name : 0}
 		self.callCount = {self.opp1_name : 0, self.opp2_name : 0}
@@ -369,10 +369,11 @@ class Statistician:
 			self.postFlopWinPct[self.opp1_name] = float(self.postFlopWinCount[self.opp1_name]) / self.postFlopCount 
 			self.postFlopWinPct[self.opp2_name] = float(self.postFlopWinCount[self.opp2_name]) / self.postFlopCount 
 
-	def compileMatchStatistics(self, hand_id):
-		for opponent_name in [self.opp1_name, self.opp2_name]:
-			if self.numHandsPlayed[opponent_name] == 0:
-				self.numHandsPlayed[opponent_name] = hand_id
+	def compileMatchStatistics(self, hand_id, opponent_name):
+		if self.numHandsPlayed[opponent_name] == 0:
+			self.numHandsPlayed[opponent_name] = hand_id
+		return "OpponentName: " + opponent_name + " PFR: " + str(self.getPFR(opponent_name)) + " FOLDPFR: " + str(self.getPFRFold(opponent_name)) + 
+				" AggressionPercent: " + str(self.getAggressionPercent(opponent_name)) + " VPIPPercent: " + str(self.getVPIPPercent(opponent_name))
 
 		print "######## DEBUGGING PREFLOP STATISTICS ########"
 		print "Player Name: ", self.myName
@@ -408,22 +409,17 @@ class Statistician:
 		self.equity_table_2 = equity_table_2
 		self.equity_table_3 = equity_table_3
 
-	def getPFR(self):
-		# pFrList = 
-		for opponent_name in [self.opp1_name, self.opp2_name]:
-			return float(self.pfrCount[opponent_name])/ self.numHandsPlayed[opponent_name]
+	def getPFR(self, opponent_name):
+		return float(self.pfrCount[opponent_name])/ self.numHandsPlayed[opponent_name]
 
+	def getPFRFold(self, opponent_name):
+		return float(self.foldCountpFr[opponent_name]) / self.numHandsPlayed[opponent_name]
 
-	def getPFRFold(self):
-		for opponent_name in [self.opp1_name, self.opp2_name]:
-			return float(self.foldCountpFr[opponent_name]) / self.numHandsPlayed[opponent_name]
+	def getAggressionPercent(self, opponent_name):
+		return float(self.raiseCount[opponent_name] + self.betCount[opponent_name]) / (self.raiseCount[opponent_name] + self.betCount[opponent_name] + self.callCount[opponent_name] + self.checkCount[opponent_name] + self.foldCount[opponent_name])
 
-	def getAggressionPercent(self):
-		self.aggressionPercent[self.opp1_name] = float(self.raiseCount[self.opp1_name] + self.betCount[self.opp1_name]) / (self.raiseCount[self.opp1_name] + self.betCount[self.opp1_name] + self.callCount[self.opp1_name] + self.checkCount[self.opp1_name] + self.foldCount[self.opp1_name])
-		self.aggressionPercent[self.opp2_name] = float(self.raiseCount[self.opp2_name] + self.betCount[self.opp2_name]) / (self.raiseCount[self.opp2_name] + self.betCount[self.opp2_name] + self.callCount[self.opp2_name] + self.checkCount[self.opp2_name] + self.foldCount[self.opp2_name])
-
-	def getVPIPPercent(self):
-		pass
+	def getVPIPPercent(self, opponent_name):
+		return self.vpipCount[opponent_name] / self.numHandsPlayed[opponent_name]
 
 	def calculateAvgEquityPreFlop(self, opponent_name, hand, active_players):
 		if active_players == 2:
