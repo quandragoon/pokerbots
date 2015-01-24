@@ -73,22 +73,25 @@ class Statistician:
 		self.numActivePlayersRiver = 0
 		self.equity_table_2 = {}
 		self.equity_table_3 = {}
-		self.equityTotalPreFlop_two = {self.opp1_name : 0, self.opp2_name : 0}
-		self.equityTotalPreFlop_three = {self.opp1_name : 0, self.opp2_name : 0}
-		self.equityTotalFlop_two = {self.opp1_name : 0, self.opp2_name : 0}
-		self.equityTotalFlop_three = {self.opp1_name : 0, self.opp2_name : 0}
-		self.equityTotalTurn_two = {self.opp1_name : 0, self.opp2_name : 0}
-		self.equityTotalTurn_three = {self.opp1_name : 0, self.opp2_name : 0}
-		self.equityTotalRiver_two = {self.opp1_name : 0, self.opp2_name : 0}
-		self.equityTotalRiver_three = {self.opp1_name : 0, self.opp2_name : 0}
-		self.AverageEquityPreFlop_two = {self.opp1_name : 0, self.opp2_name : 0}
-		self.AverageEquityFlop_two = {self.opp1_name : 0, self.opp2_name : 0}
-		self.AverageEquityTurn_two = {self.opp1_name : 0, self.opp2_name : 0}
-		self.AverageEquityRiver_two = {self.opp1_name : 0, self.opp2_name : 0}
-		self.AverageEquityPreFlop_three = {self.opp1_name : 0, self.opp2_name : 0}
-		self.AverageEquityFlop_three = {self.opp1_name : 0, self.opp2_name : 0}
-		self.AverageEquityTurn_three = {self.opp1_name : 0, self.opp2_name : 0}
-		self.AverageEquityRiver_three = {self.opp1_name : 0, self.opp2_name : 0}
+
+		self.totalEquityTwoP1   = {0:0, 3:0, 4:0, 5:0}
+		self.totalEquityTwoP2   = {0:0, 3:0, 4:0, 5:0}
+		self.totalEquityThreeP1 = {0:0, 3:0, 4:0, 5:0}
+		self.totalEquityThreeP2 = {0:0, 3:0, 4:0, 5:0}    
+
+		self.averageEquityTwoP1   = {0:0, 3:0, 4:0, 5:0}
+		self.averageEquityTwoP2   = {0:0, 3:0, 4:0, 5:0}
+		self.averageEquityThreeP1 = {0:0, 3:0, 4:0, 5:0}
+		self.averageEquityThreeP2 = {0:0, 3:0, 4:0, 5:0}
+		self.averageEquityTwo     = {self.opp1_name:self.averageEquityTwoP1, self.opp2_name:self.averageEquityTwoP2}
+		self.averageEquityThree   = {self.opp1_name:self.averageEquityThreeP1, self.opp2_name:self.averageEquityThreeP2}
+
+		self.minEquityTwoP1   = {0:1, 3:1, 4:1, 5:1}
+		self.minEquityTwoP2   = {0:1, 3:1, 4:1, 5:1}
+		self.minEquityThreeP1 = {0:1, 3:1, 4:1, 5:1}
+		self.minEquityThreeP2 = {0:1, 3:1, 4:1, 5:1}
+		self.minEquityTwo     = {self.opp1_name:self.minEquityTwoP1, self.opp2_name:self.minEquityTwoP2}
+		self.minEquityThree   = {self.opp1_name:self.minEquityThreeP1, self.opp2_name:self.minEquityThreeP2}
 
 	def getNumActivePlayers(self, num_active):
 		self.numActivePlayersPreflop = num_active
@@ -345,10 +348,24 @@ class Statistician:
 							self.threePlayershowdownCount[opponent_name] += 1
 						hand = last_action_split[1] + last_action_split[2]
 						boardcards = received_packet['boardcards']
-						self.calculateAvgEquityPreFlop(opponent_name, hand, self.numActivePlayersPreflop)
-						self.calculateAvgEquityFlop(opponent_name, hand, self.numActivePlayersFlop, boardcards[0:3])
-						self.calculateAvgEquityTurn(opponent_name, hand, self.numActivePlayersTurn, boardcards[0:4])
-						self.calculateAvgEquityRiver(opponent_name, hand, self.numActivePlayersRiver, boardcards)
+						if opponent_name == self.opp1_name:
+							self.calculateAvgEquityP1(hand, self.numActivePlayersPreflop, [])
+							self.calculateAvgEquityP1(hand, self.numActivePlayersFlop, boardcards[0:3])
+							self.calculateAvgEquityP1(hand, self.numActivePlayersTurn, boardcards[0:4])
+							self.calculateAvgEquityP1(hand, self.numActivePlayersRiver, boardcards)
+							self.calculateMinEquityP1(hand, self.numActivePlayersPreflop, [])
+							self.calculateMinEquityP1(hand, self.numActivePlayersFlop, boardcards[0:3])
+							self.calculateMinEquityP1(hand, self.numActivePlayersTurn, boardcards[0:4])
+							self.calculateMinEquityP1(hand, self.numActivePlayersRiver, boardcards)
+						elif opponent_name == self.opp2_name:
+							self.calculateAvgEquityP2(hand, self.numActivePlayersPreflop, [])
+							self.calculateAvgEquityP2(hand, self.numActivePlayersFlop, boardcards[0:3])
+							self.calculateAvgEquityP2(hand, self.numActivePlayersTurn, boardcards[0:4])
+							self.calculateAvgEquityP2(hand, self.numActivePlayersRiver, boardcards)
+							self.calculateMinEquityP2(hand, self.numActivePlayersPreflop, [])
+							self.calculateMinEquityP2(hand, self.numActivePlayersFlop, boardcards[0:3])
+							self.calculateMinEquityP2(hand, self.numActivePlayersTurn, boardcards[0:4])
+							self.calculateMinEquityP2(hand, self.numActivePlayersRiver, boardcards)
 				
 			self.playerRaisedPreFlop = False
 			self.playercBetBool = False
@@ -421,37 +438,72 @@ class Statistician:
 	def getVPIPPercent(self, opponent_name):
 		return self.vpipCount[opponent_name] / self.numHandsPlayed[opponent_name]
 
-	def calculateAvgEquityPreFlop(self, opponent_name, hand, active_players):
+	def calculateAvgEquityP1(self, hand, active_players, cards):
 		if active_players == 2:
-			self.equityTotalPreFlop_two[opponent_name] += self.equity_table_2[hand]
-			self.AverageEquityPreFlop_two[opponent_name] = self.equityTotalPreFlop_two[opponent_name]/ self.twoPlayershowdownCount[opponent_name]
-		else:
-			self.equityTotalPreFlop_three[opponent_name] += self.equity_table_3[hand]
-			self.AverageEquityPreFlop_three[opponent_name] = self.equityTotalPreFlop_three[opponent_name]/ self.threePlayershowdownCount[opponent_name]
+			if len(cards) == 0:
+				eq = self.equity_table2[hand]
+			else:
+				eq = pbots_calc.calc(':'.join([hand, 'xx']), ''.join(cards), "", 100).ev[0]
+			self.totalEquityTwoP1[len(cards)] += eq
+			self.averageEquityTwoP1[len(cards)] = self.totalEquityTwoP1[len(cards)] / self.twoPlayershowdownCount
 
-	def calculateAvgEquityFlop(self, opponent_name, hand, active_players, cards):
-		if active_players == 2:
-			self.equityTotalFlop_two[opponent_name] += pbots_calc.calc(':'.join([hand, 'xx']), ''.join(cards), "", 100).ev[0] # idk how many iters
-			self.AverageEquityFlop_two[opponent_name] = self.equityTotalFlop_two[opponent_name]/ self.twoPlayershowdownCount[opponent_name]
-		else:
-			self.equityTotalFlop_three[opponent_name] += pbots_calc.calc(':'.join([hand, 'xx', 'xx']), ''.join(cards), "", 100).ev[0] # how many iters doe
-			self.AverageEquityFlop_three[opponent_name] = self.equityTotalFlop_three[opponent_name]/ self.threePlayershowdownCount[opponent_name]
+		elif active_players == 3:
+			if len(cards) == 0:
+				eq = self.equity_table3[hand]
+			else:
+				eq = pbots_calc.calc(':'.join([hand, 'xx', 'xx']), ''.join(cards), "", 100).ev[0]
+			self.totalEquityThreeP1[len(cards)] += eq
+			self.averageEquityThreeP1[len(cards)] = self.totalEquityThreeP1[len(cards)] / self.threePlayershowdownCount
 
-	def calculateAvgEquityTurn(self, opponent_name, hand, active_players, cards):
+	def calculateAvgEquityP2(self, hand, active_players, cards):
 		if active_players == 2:
-			self.equityTotalTurn_two[opponent_name] += pbots_calc.calc(':'.join([hand, 'xx']), ''.join(cards), "", 100).ev[0] # idk how many iters
-			self.AverageEquityTurn_two[opponent_name] = self.equityTotalTurn_two[opponent_name]/ self.twoPlayershowdownCount[opponent_name]
-		else:
-			self.equityTotalTurn_three[opponent_name] += pbots_calc.calc(':'.join([hand, 'xx', 'xx']), ''.join(cards), "", 100).ev[0] # how many iters doe
-			self.AverageEquityTurn_three[opponent_name] = self.equityTotalTurn_three[opponent_name]/ self.threePlayershowdownCount[opponent_name]
+			if len(cards) == 0:
+				eq = self.equity_table2[hand]
+			else:
+				eq = pbots_calc.calc(':'.join([hand, 'xx']), ''.join(cards), "", 100).ev[0]
+			self.totalEquityTwoP2[len(cards)] += eq
+			self.averageEquityTwoP2[len(cards)] = self.totalEquityTwoP2[len(cards)] / self.twoPlayershowdownCount
 
-	def calculateAvgEquityRiver(self, opponent_name, hand, active_players, cards):
+		elif active_players == 3:
+			if len(cards) == 0:
+				eq = self.equity_table3[hand]
+			else:
+				eq = pbots_calc.calc(':'.join([hand, 'xx', 'xx']), ''.join(cards), "", 100).ev[0]
+			self.totalEquityThreeP2[len(cards)] += eq
+			self.averageEquityThreeP2[len(cards)] = self.totalEquityThreeP2[len(cards)] / self.threePlayershowdownCount
+
+	def calculateMinEquityP1(self, hand, active_players, cards):
 		if active_players == 2:
-			self.equityTotalRiver_two[opponent_name] += pbots_calc.calc(':'.join([hand, 'xx']), ''.join(cards), "", 100).ev[0] # idk how many iters
-			self.AverageEquityRiver_two[opponent_name] = self.equityTotalRiver_two[opponent_name]/ self.twoPlayershowdownCount[opponent_name]
-		else:
-			self.equityTotalRiver_three[opponent_name] += pbots_calc.calc(':'.join([hand, 'xx', 'xx']), ''.join(cards), "", 100).ev[0] # how many iters doe
-			self.AverageEquityRiver_three[opponent_name] = self.equityTotalRiver_three[opponent_name]/ self.threePlayershowdownCount[opponent_name]
+			if len(cards) == 0:
+				eq = self.equity_table2[hand]
+			else:
+				eq = pbots_calc.calc(':'.join([hand, 'xx']), ''.join(cards), "", 100).ev[0]
+			self.minEquityTwoP1[len(cards)] = min(eq, self.minEquityTwoP1)
+
+		elif active_players == 3:
+			if len(cards) == 0:
+				eq = self.equity_table3[hand]
+			else:
+				eq = pbots_calc.calc(':'.join([hand, 'xx', 'xx']), ''.join(cards), "", 100).ev[0]
+			self.minEquityThreeP1[len(cards)] = min(eq, self.minEquityThreeP1)
+
+
+	def calculateMinEquityP2(self, hand, active_players, cards):
+		if active_players == 2:
+			if len(cards) == 0:
+				eq = self.equity_table2[hand]
+			else:
+				eq = pbots_calc.calc(':'.join([hand, 'xx']), ''.join(cards), "", 100).ev[0]
+			self.minEquityTwoP2[len(cards)] = min(eq, self.minEquityTwoP2)
+
+		elif active_players == 3:
+			if len(cards) == 0:
+				eq = self.equity_table3[hand]
+			else:
+				eq = pbots_calc.calc(':'.join([hand, 'xx', 'xx']), ''.join(cards), "", 100).ev[0]
+			self.minEquityThreeP2[len(cards)] = min(eq, self.minEquityThreeP2)
+
+	
 
 
 
