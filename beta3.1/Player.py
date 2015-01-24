@@ -73,19 +73,6 @@ def calc_icm (a, b, c):
 
     s = float(a + b + c)
 
-    # if a == s:
-    #     return (FIRST_PRIZE, SECOND_PRIZE, THIRD_PRIZE)
-
-    # elif b == s:
-    #     return (THIRD_PRIZE, FIRST_PRIZE, SECOND_PRIZE)
-
-    # elif c == s:
-    #     return (THIRD_PRIZE, SECOND_PRIZE, FIRST_PRIZE)
-
-    # else:
-
-    #   s = float(s)
-
     '''
     All cases in which two or more players are all-in 
     are now handled in the should_call() method.
@@ -337,6 +324,9 @@ class Player:
         call_win_ew  = 0
         call_lose_ew = 0
 
+        if self.call_amount < SLOW_PLAY_AMOUNT:
+            return True 
+
         # should call before the flop
         if self.num_boardcards == 0 and self.potsize <= 6:
             return True
@@ -526,7 +516,7 @@ class Player:
         if equity < self.fold_thres and ((own_a_lot_of_chips != True) or (self.num_boardcards != 0)):
             # TODO: Implement bluffing / call here
             if CHECK in avail_actions:
-                # bet a little bit if possible to exploit bots who fold to small raises:
+                # bet a little bit if possible to exploit bots who fold to small raises: (but dont do this all the time)
                 if BET in avail_actions:
                     print "MINBET: " + str(self.minBet)
                     return BET + ":" + str(self.minBet)
@@ -541,7 +531,7 @@ class Player:
                 return BET + ":" + str(amount)
             elif RAISE in avail_actions:
                 # if they raise a little, either counter raise or call
-                if self.call_amount < SLOW_PLAY_AMOUNT or self.should_call(equity):
+                if self.should_call(equity):
                     amount = self.raise_handler(winning_factor)
                     return RAISE + ":" + str(amount)
                 else:
@@ -608,26 +598,6 @@ class Player:
         action = self.get_best_action (received_packet, avail_actions)
         self.stats.updateOpponentStatistics(received_packet, self.hand_id, action)
         s.send(action + "\n")
-
-
-        # for action in received_packet['legal_actions']:
-        #     split_action = action.split(":")
-
-        #     if split_action[0] == BET:
-        #         made_bet = self.bet_handler()
-        #         if made_bet:
-        #             return
-        #     elif split_action[0] == RAISE:
-        #         made_raise = self.raise_handler()
-        #         if made_raise:
-        #             return
-        #     elif split_action[0] == CALL:
-
-            # if split_action[0] == BET or split_action[0] == RAISE:
-            #     self.minBet = int(split_action[1])
-            #     self.maxBet = int(split_action[2])
-
-            #     s.send(split_action[0]+":"+str(self.maxBet) + "\n")  
 
 
 

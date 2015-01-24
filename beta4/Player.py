@@ -35,6 +35,8 @@ DIAMOND = "d"
 HEART   = "h"
 
 
+SLOW_PLAY_AMOUNT = 5
+
 # equity threshold
 THREE_FOLD_THRES_TABLE  = {0 : 0.25, 3 : 0.25, 4 : 0.25, 5 : 0.25}
 THREE_RAISE_THRES_TABLE = {0 : 0.36, 3 : 0.6,  4 : 0.75, 5 : 0.8}
@@ -54,7 +56,8 @@ POWER = 4
 MONTE_CARLO_ITER = 30000
 DELTA_ITER       = 5000
 # BITCH_FACTOR_TABLE = {0 : 0.75, 3 : 0.8, 4 : 0.9, 5 : 1}
-BITCH_FACTOR_TABLE = {0 : 1, 3 : 2, 4 : 2.5, 5 : 3}
+TWO_IN_BITCH_FACTOR_TABLE   = {0 : 0.99, 3 : 1, 4 : 1.25, 5 : 1.5}
+THREE_IN_BITCH_FACTOR_TABLE = {0 : 0.99, 3 : 1.5, 4 : 2, 5 : 2}
 
 
 # print pbots_calc.calc("AhKh:xx", "ThJhQh2s7s", "", 1)
@@ -69,19 +72,6 @@ THIRD_PRIZE  = 0
 def calc_icm (a, b, c):
 
     s = float(a + b + c)
-
-    # if a == s:
-    #     return (FIRST_PRIZE, SECOND_PRIZE, THIRD_PRIZE)
-
-    # elif b == s:
-    #     return (THIRD_PRIZE, FIRST_PRIZE, SECOND_PRIZE)
-
-    # elif c == s:
-    #     return (THIRD_PRIZE, SECOND_PRIZE, FIRST_PRIZE)
-
-    # else:
-
-    #   s = float(s)
 
     '''
     All cases in which two or more players are all-in 
@@ -338,11 +328,14 @@ class Player:
         call_win_ew  = 0
         call_lose_ew = 0
 
+        if self.call_amount < SLOW_PLAY_AMOUNT:
+            return True 
+
         # should call before the flop
         if self.num_boardcards == 0 and self.potsize <= 6:
             return True
 
-        bitch_factor = BITCH_FACTOR_TABLE[self.num_boardcards]
+        bitch_factor = 1    
 
         # check if one is out
         guy_active = ""
@@ -359,6 +352,7 @@ class Player:
                 return True
 
             else:
+                bitch_factor = TWO_IN_BITCH_FACTOR_TABLE[self.num_boardcards]
                 fold_chips = self.my_stacksize
                 call_lose_chips = self.my_stacksize - self.call_amount
                 call_win_chips = self.my_stacksize + self.potsize
@@ -448,18 +442,21 @@ class Player:
                 call_lose_ew = skill_a*call_lose_ew_a + skill_b*call_lose_ew_b
 
         # logic to determine call/fold
-        bitch_factor = BITCH_FACTOR_TABLE[self.num_boardcards]
+        if self.one_folded:
+            bitch_factor = TWO_IN_BITCH_FACTOR_TABLE[self.num_boardcards]
+        else:
+            bitch_factor = THREE_IN_BITCH_FACTOR_TABLE[self.num_boardcards]
         lhs = fold_ew * bitch_factor
         rhs = equity*call_win_ew + (1-equity)*call_lose_ew
 
-        # print 'HAND ID : ' + str(self.hand_id)
-        # print 'MY HAND : ' + self.my_hand
-        # print 'MY STACK: ' + str(self.my_stacksize)
-        # print 'POT     : ' + str(self.potsize)
-        # print 'EQUITY  : ' + str(equity)
-        # print 'FOLD EW : ' + str(fold_ew) 
-        # print "CALL EW : " + str(rhs)
-        # print 'BITCH F : ' + str(bitch_factor)
+        print 'HAND ID : ' + str(self.hand_id)
+        print 'MY HAND : ' + self.my_hand
+        print 'MY STACK: ' + str(self.my_stacksize)
+        print 'POT     : ' + str(self.potsize)
+        print 'EQUITY  : ' + str(equity)
+        print 'FOLD EW : ' + str(fold_ew) 
+        print "CALL EW : " + str(rhs)
+        print 'BITCH F : ' + str(bitch_factor)
         if lhs < rhs:
             return True
         return False
@@ -518,20 +515,31 @@ class Player:
 
         print 'EQUITY: ' + str(equity)
 
-        if equity < self.fold_thres:
+        own_a_lot_of_chips = self.my_stacksize > 400 
+
+        if equity < self.fold_thres and ((own_a_lot_of_chips != True) or (self.num_boardcards != 0)):
             # TODO: Implement bluffing / call here
             if CHECK in avail_actions:
+                # bet a little bit if possible to exploit bots who fold to small raises: (but dont do this all the time)
+                if BET in avail_actions:
+                    print "MINBET: " + str(self.minBet)
+                    return BET + ":" + str(self.minBet)
                 return CHECK
             return FOLD
 
-        elif equity > self.raise_thres and (self.is_new_round or do_reraise): 
+        # elif equity > self.raise_thres and (self.is_new_round or do_reraise): 
+        elif equity > self.raise_thres:
             winning_factor = ((equity - self.fold_thres) / (1 - self.fold_thres))**POWER
             if BET in avail_actions:
                 amount = self.bet_handler(winning_factor)
                 return BET + ":" + str(amount)
             elif RAISE in avail_actions:
-                amount = self.raise_handler(winning_factor)
-                return RAISE + ":" + str(amount)
+                # if they raise a little, either counter raise or call
+                if self.should_call(equity):
+                    amount = self.raise_handler(winning_factor)
+                    return RAISE + ":" + str(amount)
+                else:
+                    return FOLD
         
         if CALL in avail_actions: 
             if self.should_call(equity):
@@ -594,26 +602,6 @@ class Player:
         action = self.get_best_action (received_packet, avail_actions)
         self.stats.updateOpponentStatistics(received_packet, self.hand_id, action)
         s.send(action + "\n")
-
-
-        # for action in received_packet['legal_actions']:
-        #     split_action = action.split(":")
-
-        #     if split_action[0] == BET:
-        #         made_bet = self.bet_handler()
-        #         if made_bet:
-        #             return
-        #     elif split_action[0] == RAISE:
-        #         made_raise = self.raise_handler()
-        #         if made_raise:
-        #             return
-        #     elif split_action[0] == CALL:
-
-            # if split_action[0] == BET or split_action[0] == RAISE:
-            #     self.minBet = int(split_action[1])
-            #     self.maxBet = int(split_action[2])
-
-            #     s.send(split_action[0]+":"+str(self.maxBet) + "\n")  
 
 
 
