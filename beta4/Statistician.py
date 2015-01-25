@@ -133,11 +133,10 @@ class Statistician:
 						self.foldCountpFr[opponent_name] += 1
 					self.foldCount[opponent_name] += 1
 					self.numActivePlayersPreflop -= 1
-					print "FOLD PREFLOP"
+					print "FOLD PREFLOP OPP FOLD"
 
 				elif split_action[0] == CHECK:
 					self.checkCount[opponent_name] += 1
-		self.numActivePlayersFlop = self.numActivePlayersPreflop
 
 	def processPostFlopStatistics(self, opponent_names, hand_statistics, board_state):
 		flop_index = 0
@@ -165,13 +164,14 @@ class Statistician:
 							self.foldCountpFr[opponent_name] += 1
 						self.foldCount[opponent_name] += 1
 						self.numActivePlayersPreflop -= 1
-						print "FOLD PREFLOP"
+						print "FOLD PREFLOP OPP FOLD"
 
 					elif split_action[0] == CHECK:
 						self.checkCount[opponent_name] += 1
 		
 		elif board_state == TURN:
 			self.playerSeenTurn = True
+
 		elif board_state == RIVER:
 			self.playerSeenRiver = True
 
@@ -214,15 +214,17 @@ class Statistician:
 					self.foldCount[opponent_name] += 1
 					if board_state == FLOP:
 						self.numActivePlayersFlop -= 1
-						self.numActivePlayersTurn = self.numActivePlayersFlop
-						print "FOLD FLOP"
-					elif board_state == TURN:
+						print "FOLD FLOP IF OPP FOLD"
+					self.numActivePlayersTurn = self.numActivePlayersFlop
+					if board_state == TURN:
+						self.playerSeenTurn = True
 						self.numActivePlayersTurn -= 1
-						self.numActivePlayersRiver = self.numActivePlayersTurn
-						print "FOLD TURN"
-					elif board_state == RIVER:
+						print "FOLD TURN IF OPP FOLD"
+					self.numActivePlayersRiver = self.numActivePlayersTurn
+					if board_state == RIVER:
+						self.playerSeenRiver = True
 						self.numActivePlayersRiver -= 1
-						print "FOLD RIVER"
+						print "FOLD RIVER IF OPP FOLD"
 
 		for opp_name in opponent_names:
 			if (board_state == FLOP and (self.checkCountFlop[opp_name] == self.raiseCountFlop[opp_name])):
@@ -255,23 +257,22 @@ class Statistician:
 				last_action_split = last_action.split(":")
 				if (last_action_split[0] == SHOW and last_action_split[-1] == self.myName):
 					self.playerSeenShowdown = True
-
-
+			
 			if (not self.playerSeenFlop):	
 				self.numActivePlayersPreflop -= 1
-				print "FOLD PREFLOP"
+				print "FOLD PREFLOP IF PLAYER INACTIVE"
 			
 			elif (not self.playerSeenTurn):
 				self.numActivePlayersFlop -= 1
-				print "FOLD FLOP"
+				print "FOLD FLOP IF PLAYER INACTIVE"
 			
 			elif (not self.playerSeenRiver):
 				self.numActivePlayersTurn -= 1
-				print "FOLD TURN"
+				print "FOLD TURN IF PLAYER INACTIVE"
 
 			elif (not self.playerSeenShowdown and self.playerSeenRiver):
 				self.numActivePlayersRiver -= 1
-				print "FOLD RIVER"
+				print "FOLD RIVER IF PLAYER INACTIVE"
 
 			self.numActivePlayersFlop = self.numActivePlayersPreflop
 			self.numActivePlayersTurn = self.numActivePlayersFlop
