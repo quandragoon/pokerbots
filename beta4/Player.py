@@ -36,12 +36,16 @@ HEART   = "h"
 
 
 SLOW_PLAY_AMOUNT = 5
+LOTS_OF_CHIPS    = 400
+SUFFICIENT_CHIPS = 100
 
 # equity threshold
 THREE_FOLD_THRES_TABLE  = {0 : 0.25, 3 : 0.25, 4 : 0.25, 5 : 0.25}
 THREE_RAISE_THRES_TABLE = {0 : 0.36, 3 : 0.6,  4 : 0.75, 5 : 0.8}
 TWO_FOLD_THRES_TABLE    = {0 : 0.4,  3 : 0.4,  4 : 0.4,  5 : 0.4}
 TWO_RAISE_THRES_TABLE   = {0 : 0.6,  3 : 0.75, 4 : 0.85, 5 : 0.9}
+
+BET_SMALL_LIKELIHOOD = {}
 
 
 # randomness threshold
@@ -71,7 +75,7 @@ THIRD_PRIZE  = 0
 # ICM Helper function
 def calc_icm (a, b, c):
 
-    s = float(a + b + c)
+    s = float(a + b + c + 0.01)
 
     '''
     All cases in which two or more players are all-in 
@@ -149,14 +153,16 @@ class Player:
         self.fold_thres             = 0
         self.reraise_thres          = 0
         self.raise_thres            = 0
+        self.highestRaiseAmtThisRnd = 0
         self.call_amount            = 0
+        self.inc_call_amount        = 0
         self.is_new_round           = True
         self.last_action            = None
         self.num_boardcards         = -1
         self.my_seat                = 1
         self.potsize                = 0
         self.opp_dict               = {}
-        self.stats                  = None
+        self.STATS                  = None
         self.monte_carlo_iter       = MONTE_CARLO_ITER
         self.one_folded             = False
 
@@ -206,7 +212,9 @@ class Player:
 
         self.my_name = received_packet['player_name']
 
-        self.stats = Statistician.Statistician(self.my_name, self.opponent_1_name, self.opponent_2_name)
+        ###############################################################################################
+        self.STATS = Statistician.Statistician(self.my_name, self.opponent_1_name, self.opponent_2_name)
+        ###############################################################################################
 
         self.opp_dict[self.opponent_1_name] = Opponent(self.opponent_1_name)
         self.opp_dict[self.opponent_2_name] = Opponent(self.opponent_2_name)
@@ -215,7 +223,9 @@ class Player:
         self.time_low_thres  = 0.3 * self.time_bank
         self.time_per_hand   = 2 * self.time_bank / received_packet['num_hands']  
 
-        self.stats.getPrecomputedHashtables(self.equity_table_2, self.equity_table_3) 
+        ###############################################################################################
+        self.STATS.getPrecomputedHashtables(self.equity_table_2, self.equity_table_3) 
+        ###############################################################################################
 
         # If we have already played the opponent before, 
         # we load their statistics from the previous encounter
@@ -240,7 +250,9 @@ class Player:
         self.my_original_stacksize = self.list_of_stacksizes[self.my_seat - 1]
         self.hand_id = received_packet['handID']
         self.num_active_players = received_packet['num_active_players']
-        self.stats.getNumActivePlayers(self.num_active_players)
+        ###############################################################################################
+        self.STATS.getNumActivePlayers(self.num_active_players)
+        ###############################################################################################
         self.list_of_active_players = received_packet['active_players']
 
         # adjust iterations
@@ -270,7 +282,9 @@ class Player:
                 # update status
                 if (self.opp_dict[name].stack_size == 0 and self.opp_dict[name].status != OUT):
                     self.opp_dict[name].status = OUT
-                    self.stats.updateHandCount(name, self.hand_id - 1)
+                    ###############################################################################################
+                    self.STATS.updateHandCount(name, self.hand_id - 1)
+                    ###############################################################################################
                 else:
                     self.opp_dict[name].status = ACTIVE
 
@@ -296,7 +310,9 @@ class Player:
         else: # EBOLO
             bet_amount = self.my_stacksize * winning_factor  
 
-        return self.makeBet(bet_amount)
+        amountBet = self.makeBet(bet_amount)
+        self.highestRaiseAmtThisRnd = amountBet
+        return amountBet
         # s.send(BET + ':' + str(self.makeBet(bet_amount)) + '\n')
 
 
@@ -315,7 +331,9 @@ class Player:
         else: # EBOLO
             raise_amount = self.my_stacksize * winning_factor  
 
-        return self.makeRaise(raise_amount)
+        amountRaise = self.makeRaise(raise_amount)
+        self.highestRaiseAmtThisRnd = amountRaise
+        return amountRaise
         # s.send(RAISE + ':' + str(self.makeRaise(raise_amount)) + '\n')
 
 
@@ -323,7 +341,7 @@ class Player:
 
 
 
-    def should_call (self, equity):
+    def should_call_no_stats (self, equity):
         fold_ew      = 0
         call_win_ew  = 0
         call_lose_ew = 0
@@ -354,7 +372,7 @@ class Player:
             else:
                 bitch_factor = TWO_IN_BITCH_FACTOR_TABLE[self.num_boardcards]
                 fold_chips = self.my_stacksize
-                call_lose_chips = self.my_stacksize - self.call_amount
+                call_lose_chips = self.my_stacksize - self.inc_call_amount
                 call_win_chips = self.my_stacksize + self.potsize
                 print "FOLD CHIPS: " + str(fold_chips * bitch_factor)
                 print "EXP CHIPS : " + str(call_lose_chips*(1-equity) + call_win_chips*equity)
@@ -363,7 +381,9 @@ class Player:
                 return lhs < rhs
 
         else: # all three players have chips
-            self.stats.getPostFlopWinPct()
+            ###############################################################################################
+            self.STATS.getPostFlopWinPct()
+            ###############################################################################################
             opp_names = self.opp_dict.keys()
 
             skill_a = 0.5
@@ -381,12 +401,12 @@ class Player:
             if one_folded: # one person folded
                 fold_ew = calc_icm(self.my_stacksize, self.opp_dict[guy_active].stack_size+self.potsize, self.opp_dict[guy_folded].stack_size)[0]
                 call_win_ew = calc_icm(self.my_stacksize+self.potsize, self.opp_dict[guy_active].stack_size, self.opp_dict[guy_folded].stack_size)[0]
-                call_lose_ew = calc_icm(self.my_stacksize-self.call_amount, self.opp_dict[guy_active].stack_size+self.potsize+self.call_amount, self.opp_dict[guy_folded].stack_size)[0]
+                call_lose_ew = calc_icm(self.my_stacksize-self.inc_call_amount, self.opp_dict[guy_active].stack_size+self.potsize+self.inc_call_amount, self.opp_dict[guy_folded].stack_size)[0]
 
             else: # all three are still in hand
-                if self.stats.postFlopCount > 10 and not self.stats.postFlopWinPct[opp_names[0]] == 0 and self.stats.postFlopWinPct[opp_names[1]] == 0:
-                    skill_a = self.stats.postFlopWinPct[opp_names[0]] / (self.stats.postFlopWinPct[opp_names[0]] + self.stats.postFlopWinPct[opp_names[1]])
-                    skill_b = self.stats.postFlopWinPct[opp_names[1]] / (self.stats.postFlopWinPct[opp_names[0]] + self.stats.postFlopWinPct[opp_names[1]])
+                if self.STATS.postFlopCount > 10 and not self.STATS.postFlopWinPct[opp_names[0]] == 0 and self.STATS.postFlopWinPct[opp_names[1]] == 0:
+                    skill_a = self.STATS.postFlopWinPct[opp_names[0]] / (self.STATS.postFlopWinPct[opp_names[0]] + self.STATS.postFlopWinPct[opp_names[1]])
+                    skill_b = self.STATS.postFlopWinPct[opp_names[1]] / (self.STATS.postFlopWinPct[opp_names[0]] + self.STATS.postFlopWinPct[opp_names[1]])
 
                 fold_ew_a      = calc_icm(self.my_stacksize, self.opp_dict[opp_names[0]].stack_size+self.potsize, self.opp_dict[opp_names[1]].stack_size)[0]
                 fold_ew_b      = calc_icm(self.my_stacksize, self.opp_dict[opp_names[0]].stack_size             , self.opp_dict[opp_names[1]].stack_size+self.potsize)[0]
@@ -397,7 +417,7 @@ class Player:
                 else:
                     call_win_ew = calc_icm(self.my_stacksize+self.potsize, self.opp_dict[opp_names[0]].stack_size, self.opp_dict[opp_names[1]].stack_size)[0]
 
-                if self.my_stacksize == self.call_amount: # we are all-in
+                if self.my_stacksize == self.inc_call_amount: # we are all-in
                     if self.opp_dict[opp_names[0]].stack_size == 0:
                         if self.opp_dict[opp_names[1]].stack_size != 0: # only first opponent and us all-in
                             if self.my_original_stacksize > self.opp_dict[opp_names[0]].original_stacksize:
@@ -436,8 +456,8 @@ class Player:
                         call_lose_ew_b = 0
 
                 else: # we are not all-in
-                    call_lose_ew_a = calc_icm(self.my_stacksize-self.call_amount, self.opp_dict[opp_names[0]].stack_size+self.potsize+self.call_amount, self.opp_dict[opp_names[1]].stack_size)[0]
-                    call_lose_ew_b = calc_icm(self.my_stacksize-self.call_amount, self.opp_dict[opp_names[0]].stack_size, self.opp_dict[opp_names[1]].stack_size+self.potsize+self.call_amount)[0]
+                    call_lose_ew_a = calc_icm(self.my_stacksize-self.inc_call_amount, self.opp_dict[opp_names[0]].stack_size+self.potsize+self.inc_call_amount, self.opp_dict[opp_names[1]].stack_size)[0]
+                    call_lose_ew_b = calc_icm(self.my_stacksize-self.inc_call_amount, self.opp_dict[opp_names[0]].stack_size, self.opp_dict[opp_names[1]].stack_size+self.potsize+self.inc_call_amount)[0]
                 
                 call_lose_ew = skill_a*call_lose_ew_a + skill_b*call_lose_ew_b
 
@@ -465,16 +485,29 @@ class Player:
 
 
 
+    def should_call(self, equity):
+        should = self.should_call_no_stats(equity)
+        # minEquity = self.STATS.minEquity[]
+        # avgEquity = self.STATS.
+        # if should:
+        #     if equity < minEquity:
+        #         return False
+        #     else:
+        #         return True
+        # else:
+        #     if equity > avgEquity:
+        #         return True
+        #     else:
+        #         return False
+        return should
+
+
+
+
+
 
     def get_best_action(self, received_packet, avail_actions = []):
         equity = None
-
-        # determine if we are still in the same betting round to prevent raising to infinity problem
-        if received_packet['num_boardcards'] == self.num_boardcards:
-            self.is_new_round = False
-        else: 
-            self.is_new_round = True
-        self.num_boardcards = received_packet['num_boardcards'] 
 
         # set thresholds
         # if not self.one_out:
@@ -515,15 +548,23 @@ class Player:
 
         print 'EQUITY: ' + str(equity)
 
-        own_a_lot_of_chips = self.my_stacksize > 400 
+        own_a_lot_of_chips = self.my_stacksize > LOTS_OF_CHIPS
 
         if equity < self.fold_thres and ((own_a_lot_of_chips != True) or (self.num_boardcards != 0)):
             # TODO: Implement bluffing / call here
             if CHECK in avail_actions:
                 # bet a little bit if possible to exploit bots who fold to small raises: (but dont do this all the time)
-                if BET in avail_actions:
-                    print "MINBET: " + str(self.minBet)
-                    return BET + ":" + str(self.minBet)
+                if BET in avail_actions and self.my_stacksize > BET_SMALL_LIKELIHOOD:
+                    random_nig = random.random()
+                    fsoldPerc = 0.0
+                    for name in self.opp_dict:
+                        if self.opp_dict[name].status == ACTIVE:
+                            sumFoldPerc += self.STATS.foldPercentage[name]
+                    if not self.one_folded:
+                        sumFoldPerc = foldPerc / 2
+                    if random_nig < foldPerc:
+                        print "MINBET: " + str(self.minBet)
+                        return BET + ":" + str(self.minBet)
                 return CHECK
             return FOLD
 
@@ -543,6 +584,7 @@ class Player:
         
         if CALL in avail_actions: 
             if self.should_call(equity):
+                self.highestRaiseAmtThisRnd = self.call_amount
                 return CALL + ":" + str(self.call_amount)
             else:
                 return FOLD
@@ -585,6 +627,14 @@ class Player:
         #     print self.opp_dict[shit].status
         #     print self.opp_dict[shit].last_action
         # print '###################################'
+        # determine if we are still in the same betting round to prevent raising to infinity problem
+        
+        if received_packet['num_boardcards'] == self.num_boardcards:
+            self.is_new_round = False
+        else: 
+            self.is_new_round = True
+            self.highestRaiseAmtThisRnd = 0
+        self.num_boardcards = received_packet['num_boardcards'] 
 
         for action in received_packet['legal_actions']:
             split_action = action.split(":")
@@ -597,21 +647,28 @@ class Player:
                 self.maxRaise = int(split_action[2])
             elif split_action[0] == CALL:
                 self.call_amount = int(split_action[1])
+                self.inc_call_amount = self.call_amount - self.highestRaiseAmtThisRnd
 
         avail_actions = [(e.split(":"))[0] for e in received_packet['legal_actions']]
         action = self.get_best_action (received_packet, avail_actions)
-        self.stats.updateOpponentStatistics(received_packet, self.hand_id, action)
+        ###############################################################################################
+        self.STATS.updateOpponentStatistics(received_packet, self.hand_id, action)
+        ###############################################################################################
         s.send(action + "\n")
 
 
 
     def handover_handler(self, received_packet):
-        self.stats.updateOpponentStatistics(received_packet, self.hand_id, "")
+        ###############################################################################################
+        self.STATS.updateOpponentStatistics(received_packet, self.hand_id, "")
+        ###############################################################################################
 
     def requestkeyvalue_handler(self, received_packet):
         # At the end, the engine will allow your bot save key/value pairs.
         # Send FINISH to indicate you're done.
-        self.stats.compileMatchStatistics(self.hand_id)
+        ###############################################################################################
+        self.STATS.compileMatchStatistics(self.hand_id)
+        ###############################################################################################
         s.send("FINISH\n")
 
 
