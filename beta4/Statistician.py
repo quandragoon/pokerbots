@@ -133,6 +133,7 @@ class Statistician:
 						self.foldCountpFr[opponent_name] += 1
 					self.foldCount[opponent_name] += 1
 					self.numActivePlayersPreflop -= 1
+					print "FOLD PREFLOP"
 
 				elif split_action[0] == CHECK:
 					self.checkCount[opponent_name] += 1
@@ -164,6 +165,7 @@ class Statistician:
 							self.foldCountpFr[opponent_name] += 1
 						self.foldCount[opponent_name] += 1
 						self.numActivePlayersPreflop -= 1
+						print "FOLD PREFLOP"
 
 					elif split_action[0] == CHECK:
 						self.checkCount[opponent_name] += 1
@@ -213,11 +215,14 @@ class Statistician:
 					if board_state == FLOP:
 						self.numActivePlayersFlop -= 1
 						self.numActivePlayersTurn = self.numActivePlayersFlop
+						print "FOLD FLOP"
 					elif board_state == TURN:
 						self.numActivePlayersTurn -= 1
 						self.numActivePlayersRiver = self.numActivePlayersTurn
+						print "FOLD TURN"
 					elif board_state == RIVER:
 						self.numActivePlayersRiver -= 1
+						print "FOLD RIVER"
 
 		for opp_name in opponent_names:
 			if (board_state == FLOP and (self.checkCountFlop[opp_name] == self.raiseCountFlop[opp_name])):
@@ -246,14 +251,27 @@ class Statistician:
 
 		# HANDOVER
 		else:
+			for last_action in received_packet['last_action'][::-1]:
+				last_action_split = last_action.split(":")
+				if (last_action_split[0] == SHOW and last_action_split[-1] == self.myName):
+					self.playerSeenShowdown = True
+
+
 			if (not self.playerSeenFlop):	
 				self.numActivePlayersPreflop -= 1
+				print "FOLD PREFLOP"
 			
-			elif (not self.playerSeenTurn and self.playerSeenFlop):
+			elif (not self.playerSeenTurn):
 				self.numActivePlayersFlop -= 1
+				print "FOLD FLOP"
 			
-			elif (not self.playerSeenRiver and self.playerSeenTurn):
+			elif (not self.playerSeenRiver):
 				self.numActivePlayersTurn -= 1
+				print "FOLD TURN"
+
+			elif (not self.playerSeenShowdown and self.playerSeenRiver):
+				self.numActivePlayersRiver -= 1
+				print "FOLD RIVER"
 
 			self.numActivePlayersFlop = self.numActivePlayersPreflop
 			self.numActivePlayersTurn = self.numActivePlayersFlop
@@ -304,14 +322,6 @@ class Statistician:
 				# 	else:
 				# 		self.myWinCount += 1
 
-			for last_action in received_packet['last_action'][flop_index:][::-1]:
-				last_action_split = last_action.split(":")
-				if (last_action_split[0] == SHOW and last_action_split[-1] == self.myName):
-					self.playerSeenShowdown = True
-
-			if (not self.playerSeenShowdown and self.playerSeenRiver):
-				self.numActivePlayersRiver -= 1
-
 			for last_action in received_packet['last_action'][flop_index:]:
 				last_action_split = last_action.split(":")
 
@@ -345,10 +355,15 @@ class Statistician:
 						self.foldCount[opponent_name] += 1
 					
 					elif last_action_split[0] == SHOW:
+						print "## DEBUG 1: " + str(self.numActivePlayersRiver)
+						print "## Showdown dict ", self.twoPlayershowdownCount, self.threePlayershowdownCount
 						if self.numActivePlayersRiver == 2:
+							print "DEBUG 2 Player"
 							self.twoPlayershowdownCount[opponent_name] += 1
 						else:
+							print "DEBUG 3 Player"
 							self.threePlayershowdownCount[opponent_name] += 1
+						
 						hand = last_action_split[1] + last_action_split[2]
 						boardcards = received_packet['boardcards']
 						if opponent_name == self.opp1_name:
@@ -378,7 +393,6 @@ class Statistician:
 			self.playerSeenRiver = False
 			self.playerSeenShowdown = False
 			self.pfrBoolean = {self.opp1_name : False, self.opp2_name : False}
-			self.reachedShowdown = {self.opp1_name: False, self.opp2_name: False}
 			self.numActivePlayersPreflop = 0
 			self.numActivePlayersFlop = 0
 			self.numActivePlayersTurn = 0
