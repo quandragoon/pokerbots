@@ -321,8 +321,6 @@ class Statistician:
 					if last_action_split[0] == RAISE:
 						if received_packet['num_boardcards'] == 0:
 							self.opponentRaisedPreFlop = True
-							self.pfrCount[opponent_name] += 1
-							self.vpipCount[opponent_name] += 1
 						elif received_packet['num_boardcards'] == 3:
 							if self.pfrBoolean[opponent_name]:
 								self.cbCount[opponent_name] += 1
@@ -335,8 +333,6 @@ class Statistician:
 						self.betCount[opponent_name] += 1
 
 					elif last_action_split[0] == CALL:
-						if received_packet['num_boardcards'] == 0:
-							self.vpipCount[opponent_name] += 1
 						self.callCount[opponent_name] += 1
 
 					elif last_action_split[0] == CHECK:
