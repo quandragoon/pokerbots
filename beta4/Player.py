@@ -71,7 +71,7 @@ TWO_IN_BITCH_FACTOR_TABLE   = {0 : 0.99, 3 : 1, 4 : 1.2, 5 : 1.3}
 THREE_IN_BITCH_FACTOR_TABLE = {0 : 0.99, 3 : 1, 4 : 1.1, 5 : 1.25}
 
 # Hand position table
-POSITION_TWO = {1: BUTTON, 1: SB, 2:BB}
+POSITION_TWO = {1: BUTTON, 1: SB, 2:BB , 3: OUT}
 POSITION_THREE = {1: BUTTON, 2: SB, 3: BB}
 
 
