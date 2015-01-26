@@ -22,6 +22,10 @@ WIN = "WIN"
 FOLDED  = -1
 INVALID = 0
 
+# KEYVALUE Packet Parsing
+FOLD_PERCENT = 9
+AGGR_PERCENT = 8
+
 DEAL = "DEAL"
 POST = "POST"
 
@@ -438,7 +442,8 @@ class Statistician:
 		self.getAggressionPercent()
 		self.getVPIPPercent()
 
-		generalStats = {"2": self.foldPercentage, "1": self.aggressionPercent}
+		generalStats = {self.opp1_name : {FOLD_PERCENT : self.foldPercentage[self.opp1_name], AGGR_PERCENT : self.aggressionPercent[self.opp1_name]}, 
+						self.opp2_name : {FOLD_PERCENT : self.foldPercentage[self.opp2_name], AGGR_PERCENT : self.aggressionPercent[self.opp2_name]}}
 		socket.send("PUT " + "averageEquityTwo "   + str(self.averageEquityTwo) + "\n")
 		socket.send("PUT " + "averageEquityThree " + str(self.averageEquityThree) + "\n")
 		socket.send("PUT " + "minEquityTwo "       + str(self.minEquityTwo) + "\n")
@@ -489,7 +494,7 @@ class Statistician:
 
 	def getAggressionPercent(self):
 		for opponent_name in [self.opp1_name, self.opp2_name]:
-			self.aggressionPercent[opponent_name] = float(self.raiseCount[opponent_name] + self.betCount[opponent_name]) / (self.raiseCount[opponent_name] + self.betCount[opponent_name] + self.callCount[opponent_name] + self.checkCount[opponent_name] + self.foldCount[opponent_name])
+			self.aggressionPercent[opponent_name] = float(self.raiseCount[opponent_name] + self.betCount[opponent_name]) / (self.raiseCount[opponent_name] + self.betCount[opponent_name] + self.callCount[opponent_name] + self.foldCount[opponent_name])
 
 	def getVPIPPercent(self):
 		for opponent_name in [self.opp1_name, self.opp2_name]:
