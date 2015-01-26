@@ -40,10 +40,10 @@ LOTS_OF_CHIPS    = 400
 SUFFICIENT_CHIPS = 100
 
 # equity threshold
-THREE_FOLD_THRES_TABLE  = {0 : 0.25, 3 : 0.25, 4 : 0.25, 5 : 0.25}
-THREE_RAISE_THRES_TABLE = {0 : 0.36, 3 : 0.6,  4 : 0.75, 5 : 0.8}
-TWO_FOLD_THRES_TABLE    = {0 : 0.4,  3 : 0.4,  4 : 0.4,  5 : 0.4}
-TWO_RAISE_THRES_TABLE   = {0 : 0.6,  3 : 0.75, 4 : 0.85, 5 : 0.9}
+THREE_FOLD_THRES_TABLE  = {0 : 0.25, 3 : 0.15, 4 : 0.2, 5 : 0.2}
+THREE_RAISE_THRES_TABLE = {0 : 0.36, 3 : 0.5,  4 : 0.7, 5 : 0.8}
+TWO_FOLD_THRES_TABLE    = {0 : 0.4,  3 : 0.25, 4 : 0.2,  5 : 0.2}
+TWO_RAISE_THRES_TABLE   = {0 : 0.6,  3 : 0.7,  4 : 0.75,  5 : 0.8}
 
 BET_SMALL_LIKELIHOOD = {}
 
@@ -60,8 +60,8 @@ POWER = 4
 MONTE_CARLO_ITER = 30000
 DELTA_ITER       = 5000
 # BITCH_FACTOR_TABLE = {0 : 0.75, 3 : 0.8, 4 : 0.9, 5 : 1}
-TWO_IN_BITCH_FACTOR_TABLE   = {0 : 0.99, 3 : 1, 4 : 1.25, 5 : 1.5}
-THREE_IN_BITCH_FACTOR_TABLE = {0 : 0.99, 3 : 1.5, 4 : 2, 5 : 2}
+TWO_IN_BITCH_FACTOR_TABLE   = {0 : 0.99, 3 : 1, 4 : 1.2, 5 : 1.3}
+THREE_IN_BITCH_FACTOR_TABLE = {0 : 0.99, 3 : 1, 4 : 1.1, 5 : 1.25}
 
 
 # print pbots_calc.calc("AhKh:xx", "ThJhQh2s7s", "", 1)
@@ -347,12 +347,15 @@ class Player:
         call_lose_ew = 0
 
         if self.call_amount < SLOW_PLAY_AMOUNT:
+            "$$$ SLOW PLAY"
             return True 
 
         # should call before the flop
         if self.num_boardcards == 0 and self.potsize <= 6:
+            "$$$ EXPLORE"
             return True
 
+        print "$$$ SKIPPED PRELIM STEPS"
         bitch_factor = 1    
 
         # check if one is out
@@ -360,6 +363,7 @@ class Player:
         guy_folded = ""
 
         if self.num_active_players == 2: #heads-up
+            print "$$$ HEADS UP"
             for name in self.opp_dict:
                 if self.opp_dict[name].status == ACTIVE:
                     guy_active = name
@@ -367,6 +371,7 @@ class Player:
             other_guy_stacksize = self.opp_dict[guy_active].original_stacksize
 
             if other_guy_stacksize <= 0.05*self.my_original_stacksize:
+                "$$$ THIS IS PROB NEVER TRUE"
                 return True
 
             else:
@@ -489,20 +494,29 @@ class Player:
         should = self.should_call_no_stats(equity)
         minEquity = 0
         avgEquity = 0
+
         if self.num_active_players == 2 or self.one_folded:
-            minEquity = self.STATS.minEquityTwo
-            avgEquity = self.STATS.averageEquityTwo
+            guy_active = ""
+            for name in self.opp_dict:
+                if self.opp_dict[name].status == ACTIVE:
+                    guy_active = name
+            minEquity = self.STATS.minEquityTwo[guy_active][self.num_boardcards]
+            avgEquity = self.STATS.averageEquityTwo[guy_active][self.num_boardcards]
         else:
-            minEquity = self.STATS.minEquityThree
-            avgEquity = self.STATS.averageEquityThree
+            minEquity = max([i[self.num_boardcards] for i in self.STATS.minEquityThree.values()])
+            avgEquity = max([i[self.num_boardcards] for i in self.STATS.averageEquityThree.values()])
 
         if should:
-            if equity < minEquity:
+            print "$$$ SHOULD"
+            if self.num_boardcards != 0 and equity < minEquity:
+                print "$$$ BUT NO"
                 return False
             else:
                 return True
         else:
+            print "$$$ SHOULD NOT"
             if equity > avgEquity:
+                print "$$$ BUT YES"
                 return True
             else:
                 return False
@@ -576,6 +590,7 @@ class Player:
 
         # elif equity > self.raise_thres and (self.is_new_round or do_reraise): 
         elif equity > self.raise_thres:
+            "$$$ IN BET"
             winning_factor = ((equity - self.fold_thres) / (1 - self.fold_thres))**POWER
             if BET in avail_actions:
                 amount = self.bet_handler(winning_factor)
