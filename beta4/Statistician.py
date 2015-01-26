@@ -142,10 +142,6 @@ class Statistician:
 		self.numHandsPlayed[name] = hand_id
 
 
-
-
-
-
 	# Update opponent statistics after each hand
 	# playerAction is the most recent action that our player took
 	def updateOpponentStatistics(self, received_packet, hand_id, num_active_players):		
@@ -431,7 +427,7 @@ class Statistician:
 		if self.postFlopCount[self.opp2_name] > 0:
 			self.postFlopWinPct[self.opp2_name] = float(self.postFlopWinCount[self.opp2_name]) / self.postFlopCount[self.opp2_name]
 
-	def compileMatchStatistics(self, hand_id):
+	def compileMatchStatistics(self, hand_id, socket):
 		for opponent_name in [self.opp1_name, self.opp2_name]:
 			if self.numHandsPlayed[opponent_name] == 0:
 				self.numHandsPlayed[opponent_name] = hand_id
@@ -442,6 +438,12 @@ class Statistician:
 		self.getAggressionPercent()
 		self.getVPIPPercent()
 
+		generalStats = {"2": self.foldPercentage, "1": self.aggressionPercent}
+		socket.send("PUT " + "averageEquityTwo "   + str(self.averageEquityTwo) + "\n")
+		socket.send("PUT " + "averageEquityThree " + str(self.averageEquityThree) + "\n")
+		socket.send("PUT " + "minEquityTwo "       + str(self.minEquityTwo) + "\n")
+		socket.send("PUT " + "minEquityThree "     + str(self.minEquityThree) + "\n")
+		socket.send("PUT " + "generalStats "       + str(generalStats) + "\n")
 		# print "######## DEBUGGING PREFLOP STATISTICS ########"
 		# print "Player Name: ", self.myName
 		# print "Names of opponent: ", self.opp1_name, self.opp2_name
@@ -492,12 +494,6 @@ class Statistician:
 	def getVPIPPercent(self):
 		for opponent_name in [self.opp1_name, self.opp2_name]:
 			self.vpipPercent[opponent_name] = self.vpipCount[opponent_name] / self.numHandsPlayed[opponent_name]
-	
-
-
-
-
-
 
 	# def processPreflopStatistics(self, opponent_names, hand_statistics, playerAction):
 	# 	if playerAction.split(":")[0] == RAISE:

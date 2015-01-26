@@ -34,6 +34,11 @@ CLUB    = "c"
 DIAMOND = "d"
 HEART   = "h"
 
+# Hand Positions
+BUTTON = "BUTTON"
+SB = "SMALL BLIND"
+BB = "BIG BLIND"
+
 
 SLOW_PLAY_AMOUNT = 5
 LOTS_OF_CHIPS    = 400
@@ -54,7 +59,9 @@ TWO_RERAISE_THRES   = 0.6
 
 POWER = 4
 
-
+# KEYVALUE Packet Parsing
+FOLD_PERCENT = 2
+AGGR_PERCENT = 1
 
 # ITER_TABLE = {0 : 30000, 3 : 30000, 4 : 30000, 5 : 30000}
 MONTE_CARLO_ITER = 30000
@@ -62,6 +69,11 @@ DELTA_ITER       = 5000
 # BITCH_FACTOR_TABLE = {0 : 0.75, 3 : 0.8, 4 : 0.9, 5 : 1}
 TWO_IN_BITCH_FACTOR_TABLE   = {0 : 0.99, 3 : 1, 4 : 1.25, 5 : 1.5}
 THREE_IN_BITCH_FACTOR_TABLE = {0 : 0.99, 3 : 1.5, 4 : 2, 5 : 2}
+
+# Hand position table
+POSITION_TWO = {1: BUTTON, 1: SB, 2:BB}
+POSITION_THREE = {1: BUTTON, 2: SB, 3: BB}
+
 
 
 # print pbots_calc.calc("AhKh:xx", "ThJhQh2s7s", "", 1)
@@ -165,6 +177,7 @@ class Player:
         self.STATS                  = None
         self.monte_carlo_iter       = MONTE_CARLO_ITER
         self.one_folded             = False
+        self.handPosition           = None
 
         # precomputed equity tables for pre flop
         self.equity_table_2         = {}
@@ -200,10 +213,7 @@ class Player:
 
 
     def keyval_handler(self, received_packet):
-        self.history_storage[received_packet['key']] = received_packet['value']
-
-
-
+        self.history_storage[received_packet['key']] = eval(received_packet['value'])
 
     def newgame_handler(self, received_packet):
 
@@ -250,6 +260,10 @@ class Player:
         self.my_original_stacksize = self.list_of_stacksizes[self.my_seat - 1]
         self.hand_id = received_packet['handID']
         self.num_active_players = received_packet['num_active_players']
+        if self.num_active_players == 2:
+            self.handPosition = POSITION_TWO[self.my_seat]
+        else:
+            self.handPosition = POSITION_THREE[self.my_seat]
         ###############################################################################################
         self.STATS.getNumActivePlayers(self.num_active_players)
         ###############################################################################################
@@ -670,13 +684,14 @@ class Player:
     def handover_handler(self, received_packet):
         ###############################################################################################
         self.STATS.updateOpponentStatistics(received_packet, self.hand_id, self.num_active_players)
+        print self.history_storage
         ###############################################################################################
 
     def requestkeyvalue_handler(self, received_packet):
         # At the end, the engine will allow your bot save key/value pairs.
         # Send FINISH to indicate you're done.
         ###############################################################################################
-        self.STATS.compileMatchStatistics(self.hand_id)
+        self.STATS.compileMatchStatistics(self.hand_id, s)
         ###############################################################################################
         s.send("FINISH\n")
 
