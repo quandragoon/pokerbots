@@ -487,19 +487,25 @@ class Player:
 
     def should_call(self, equity):
         should = self.should_call_no_stats(equity)
-        # minEquity = self.STATS.minEquity[]
-        # avgEquity = self.STATS.
-        # if should:
-        #     if equity < minEquity:
-        #         return False
-        #     else:
-        #         return True
-        # else:
-        #     if equity > avgEquity:
-        #         return True
-        #     else:
-        #         return False
-        return should
+        minEquity = 0
+        avgEquity = 0
+        if self.num_active_players == 2 or self.one_folded:
+            minEquity = self.STATS.minEquityTwo
+            avgEquity = self.STATS.averageEquityTwo
+        else:
+            minEquity = self.STATS.minEquityThree
+            avgEquity = self.STATS.averageEquityThree
+
+        if should:
+            if equity < minEquity:
+                return False
+            else:
+                return True
+        else:
+            if equity > avgEquity:
+                return True
+            else:
+                return False
 
 
 

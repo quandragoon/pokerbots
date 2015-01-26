@@ -20,7 +20,7 @@ RIVER = "RIVER"
 WIN = "WIN"
 
 FOLDED  = -1
-INVALID = -1
+INVALID = 0
 
 DEAL = "DEAL"
 POST = "POST"
@@ -87,8 +87,8 @@ class Statistician:
 		self.averageEquityTwo     = {self.opp1_name : {0 : 0.4, 3 : 0.5, 4 : 0.6, 5 : 0.7}, self.opp2_name : {0 : 0.4, 3 : 0.5, 4 : 0.6, 5 : 0.7}}
 		self.averageEquityThree   = {self.opp1_name : {0 : 0.3, 3 : 0.4, 4 : 0.5, 5 : 0.6}, self.opp2_name : {0 : 0.3, 3 : 0.4, 4 : 0.5, 5 : 0.6}}
 
-		self.minEquityTwo    = {self.opp1_name : {0:1, 3:1, 4:1, 5:1}, self.opp2_name : {0:1, 3:1, 4:1, 5:1}}
-		self.minEquityThree  = {self.opp1_name : {0:1, 3:1, 4:1, 5:1}, self.opp2_name : {0:1, 3:1, 4:1, 5:1}}
+		self.minEquityTwo    = {self.opp1_name : {0 : 0.35, 3 : 0.3, 4 : 0.5, 5 : 0.6}, self.opp2_name : {0 : 0.35, 3 : 0.3, 4 : 0.5, 5 : 0.6}}
+		self.minEquityThree  = {self.opp1_name : {0 : 0.35, 3 : 0.3, 4 : 0.5, 5 : 0.5}, self.opp2_name : {0 : 0.35, 3 : 0.3, 4 : 0.5, 5 : 0.5}}
 
 		# ====== PERCENTAGES ==========
 		self.foldPercentage = {self.opp1_name : 0, self.opp2_name : 0}
@@ -174,7 +174,7 @@ class Statistician:
 
 		#############################################################################
 		self.actionHistory.extend(received_packet['last_action'])
-		print "====> History: " + repr(self.actionHistory)
+		# print "====> History: " + repr(self.actionHistory)
 
 		numActivePlayers = num_active_players
 		boardState = PREFLOP 
@@ -192,16 +192,15 @@ class Statistician:
 					self.foldCount[act_split[-1]] += 1
 
 			elif act_split[0] == DEAL: 
-				boardState = act_split[1]
 				prev_index =  self.actionHistory.index(act) - 1
 				action_before = (self.actionHistory[prev_index].split(":"))[0]
 				action_before_before = (self.actionHistory[prev_index - 1].split(":"))[0]
 				# if nigga has two consecutive deals
-				if action_before == DEAL or action_before == CHECK or action_before_before == CHECK:
-					for name in self.numActivePlayersBeforeFold:
+				if action_before == DEAL or (action_before == CHECK and boardState != PREFLOP) or action_before_before == CHECK:
+					for name in self.numActivePlayersBeforeFold.keys():
 						self.numActivePlayersBeforeFold[name].append(INVALID)
 				else:
-					for name in self.numActivePlayersBeforeFold:
+					for name in self.numActivePlayersBeforeFold.keys():
 						if self.numActivePlayersBeforeFold[name] == [] or self.numActivePlayersBeforeFold[name][-1] != FOLDED:
 							if self.madeActionLastRound[name]:
 								self.numActivePlayersBeforeFold[name].append(numActivePlayers)
@@ -209,14 +208,21 @@ class Statistician:
 								self.numActivePlayersBeforeFold[name].append(INVALID)
 						else:
 							self.numActivePlayersBeforeFold[name].append(FOLDED)
+				boardState = act_split[1]
 				self.madeActionLastRound = {self.opp1_name : False, self.opp2_name : False, self.myName : False}
 
 			elif act_split[0] == SHOW:
+				prev_index =  self.actionHistory.index(act) - 1
+				action_before = (self.actionHistory[prev_index].split(":"))[0]
+				action_before_before = (self.actionHistory[prev_index - 1].split(":"))[0]
 				name = act_split[-1]
-				if self.numActivePlayersBeforeFold[name] == [] or self.numActivePlayersBeforeFold[name][-1] != FOLDED:
-					self.numActivePlayersBeforeFold[name].append(numActivePlayers)
+				if action_before == DEAL or action_before == CHECK or action_before_before == CHECK:
+					self.numActivePlayersBeforeFold[name].append(INVALID)
 				else:
-					self.numActivePlayersBeforeFold[name].append(FOLDED)
+					if self.numActivePlayersBeforeFold[name] == [] or self.numActivePlayersBeforeFold[name][-1] != FOLDED:
+						self.numActivePlayersBeforeFold[name].append(numActivePlayers)
+					else:
+						self.numActivePlayersBeforeFold[name].append(FOLDED)
 				self.handDict[act_split[-1]] = act_split[1] + act_split[2]
 
 			elif act_split[0] == RAISE:
@@ -255,11 +261,10 @@ class Statistician:
 				self.madeActionLastRound[act_split[-1]] = True
 
 		# Compute equity
-		for name in self.numActivePlayersBeforeFold:
-			if name != self.myName:
-				if len(self.numActivePlayersBeforeFold[name]) == 4 and self.numActivePlayersBeforeFold[name][-1] != FOLDED:
-					print "NIG NAME: " + name
-					self.calculateEquityStat(name, self.handDict[name], self.numActivePlayersBeforeFold[name], received_packet['boardcards'])
+		for name in [self.opp1_name, self.opp2_name]:
+			# if len(self.numActivePlayersBeforeFold[name]) == 4 and self.numActivePlayersBeforeFold[name][-1] != FOLDED:
+			if self.handDict[name] != "":
+				self.calculateEquityStat(name, self.handDict[name], self.numActivePlayersBeforeFold[name], received_packet['boardcards'])
 
 
 		print "====> SHITs  : " + repr(self.numActivePlayersBeforeFold)
@@ -269,6 +274,7 @@ class Statistician:
 		print "====> AVG_3  : " + repr(self.averageEquityThree) 
 		self.actionHistory = []
 		self.numActivePlayersBeforeFold = {self.opp1_name : [], self.opp2_name : [], self.myName : []}
+		self.handDict = {self.opp1_name : "", self.opp2_name : "", self.myName : ""}
 		#############################################################################
 
 
@@ -436,32 +442,32 @@ class Statistician:
 		self.getAggressionPercent()
 		self.getVPIPPercent()
 
-		print "######## DEBUGGING PREFLOP STATISTICS ########"
-		print "Player Name: ", self.myName
-		print "Names of opponent: ", self.opp1_name, self.opp2_name
-		print "Number of Hands Played: ", self.numHandsPlayed
-		print "Player Raise Count: ", self.myRaiseCount
-		print "Opponent Preflop Raise Count: ", self.pfrCount
-		print "Opponent Preflop Fold Raise Count: ", self.foldCountpFr
-		print "VPIP: ", self.vpipCount
-		print "######## END DEBUG ########"
+		# print "######## DEBUGGING PREFLOP STATISTICS ########"
+		# print "Player Name: ", self.myName
+		# print "Names of opponent: ", self.opp1_name, self.opp2_name
+		# print "Number of Hands Played: ", self.numHandsPlayed
+		# print "Player Raise Count: ", self.myRaiseCount
+		# print "Opponent Preflop Raise Count: ", self.pfrCount
+		# print "Opponent Preflop Fold Raise Count: ", self.foldCountpFr
+		# print "VPIP: ", self.vpipCount
+		# print "######## END DEBUG ########"
 
-		print "Call Count: ", self.callCount
-		print "Fold Count: ", self.foldCount
-		print "Raise Count: ", self.raiseCount
-		print "Bet Count: ", self.betCount
-		print "Check Count: ", self.checkCount
+		# print "Call Count: ", self.callCount
+		# print "Fold Count: ", self.foldCount
+		# print "Raise Count: ", self.raiseCount
+		# print "Bet Count: ", self.betCount
+		# print "Check Count: ", self.checkCount
 
-		print "######### POST FLOP STATISTICS ##########"
-		print "Showdown Count (2 player): ", self.twoPlayershowdownCount
-		print "Showdown Count (3 player): ", self.threePlayershowdownCount
-		# print "Continuation Bet: ", self.cbCount
-		print "FOLD PERCENTAGE: ", self.foldPercentage
-		print "PREFLOP FOLD PERCENTAGE: ", self.pfrFoldPercent
-		print "VPIP PERCENTAGE: ", self.vpipPercent
-		print "AGGRESSION PERCENT: ", self.aggressionPercent
-		print "PREFLOP RAISE PERCENT: ", self.pfrPercent		
-		print "######### END POST FLOP STATS  ##########"
+		# print "######### POST FLOP STATISTICS ##########"
+		# print "Showdown Count (2 player): ", self.twoPlayershowdownCount
+		# print "Showdown Count (3 player): ", self.threePlayershowdownCount
+		# # print "Continuation Bet: ", self.cbCount
+		# print "FOLD PERCENTAGE: ", self.foldPercentage
+		# print "PREFLOP FOLD PERCENTAGE: ", self.pfrFoldPercent
+		# print "VPIP PERCENTAGE: ", self.vpipPercent
+		# print "AGGRESSION PERCENT: ", self.aggressionPercent
+		# print "PREFLOP RAISE PERCENT: ", self.pfrPercent		
+		# print "######### END POST FLOP STATS  ##########"
 
 	def getPrecomputedHashtables(self, equity_table_2, equity_table_3):
 		self.equity_table_2 = equity_table_2
