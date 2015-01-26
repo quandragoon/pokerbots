@@ -404,7 +404,7 @@ class Player:
                 call_lose_ew = calc_icm(self.my_stacksize-self.inc_call_amount, self.opp_dict[guy_active].stack_size+self.potsize+self.inc_call_amount, self.opp_dict[guy_folded].stack_size)[0]
 
             else: # all three are still in hand
-                if self.STATS.postFlopCount > 10 and not self.STATS.postFlopWinPct[opp_names[0]] == 0 and self.STATS.postFlopWinPct[opp_names[1]] == 0:
+                if min(self.STATS.postFlopCount.values()) > 10 and not self.STATS.postFlopWinPct[opp_names[0]] == 0 and self.STATS.postFlopWinPct[opp_names[1]] == 0:
                     skill_a = self.STATS.postFlopWinPct[opp_names[0]] / (self.STATS.postFlopWinPct[opp_names[0]] + self.STATS.postFlopWinPct[opp_names[1]])
                     skill_b = self.STATS.postFlopWinPct[opp_names[1]] / (self.STATS.postFlopWinPct[opp_names[0]] + self.STATS.postFlopWinPct[opp_names[1]])
 
@@ -608,6 +608,9 @@ class Player:
         self.num_active_players = received_packet['num_active_players']
 
         last_actions = received_packet['last_action']
+        #################################################################
+        self.STATS.recordActions(last_actions)
+        #################################################################
         for act in last_actions:
             sp = act.split(":")
             name = sp[-1]
@@ -652,7 +655,7 @@ class Player:
         avail_actions = [(e.split(":"))[0] for e in received_packet['legal_actions']]
         action = self.get_best_action (received_packet, avail_actions)
         ###############################################################################################
-        self.STATS.updateOpponentStatistics(received_packet, self.hand_id, action)
+        # self.STATS.updateOpponentStatistics(received_packet, self.hand_id, action)
         ###############################################################################################
         s.send(action + "\n")
 
@@ -660,7 +663,7 @@ class Player:
 
     def handover_handler(self, received_packet):
         ###############################################################################################
-        self.STATS.updateOpponentStatistics(received_packet, self.hand_id, "")
+        self.STATS.updateOpponentStatistics(received_packet, self.hand_id, self.num_active_players)
         ###############################################################################################
 
     def requestkeyvalue_handler(self, received_packet):

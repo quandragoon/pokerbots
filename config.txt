@@ -20,11 +20,11 @@ TRIPLICATE = true
 # Requires PATH, which is either an absolute or relative (to the jar) path
 # pointing to the source code.
 
-# PLAYER_1_TYPE = FOLDER 
-# PLAYER_1_PATH = ./another
+PLAYER_1_TYPE = FOLDER 
+PLAYER_1_PATH = ./another
 #   PLAYER_1_SCONS_ARGS = 
-# PLAYER_1_NAME = bot_1
-# PLAYER_1_RESET_KEYS = false
+PLAYER_1_NAME = bot_1
+PLAYER_1_RESET_KEYS = false
 
 PLAYER_2_TYPE = FOLDER 
 PLAYER_2_PATH = ./beta3
@@ -39,8 +39,8 @@ PLAYER_3_NAME = bot_4
 PLAYER_3_RESET_KEYS = false
 
 
-PLAYER_1_TYPE = RANDOM
-PLAYER_1_NAME = P1
+# PLAYER_1_TYPE = RANDOM
+# PLAYER_1_NAME = P1
 
 # SOCKET: Engine will wait for bot to connect to a designed socket.
 # PLAYER_2_TYPE = SOCKET
