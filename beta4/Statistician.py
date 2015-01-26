@@ -263,11 +263,11 @@ class Statistician:
 				self.calculateEquityStat(name, self.handDict[name], self.numActivePlayersBeforeFold[name], received_packet['boardcards'])
 
 
-		print "====> SHITs  : " + repr(self.numActivePlayersBeforeFold)
-		print "====> MIN_2  : " + repr(self.minEquityTwo) 
-		print "====> MIN_3  : " + repr(self.minEquityThree) 
-		print "====> AVG_2  : " + repr(self.averageEquityTwo) 
-		print "====> AVG_3  : " + repr(self.averageEquityThree) 
+		# print "====> SHITs  : " + repr(self.numActivePlayersBeforeFold)
+		# print "====> MIN_2  : " + repr(self.minEquityTwo) 
+		# print "====> MIN_3  : " + repr(self.minEquityThree) 
+		# print "====> AVG_2  : " + repr(self.averageEquityTwo) 
+		# print "====> AVG_3  : " + repr(self.averageEquityThree) 
 		self.actionHistory = []
 		self.numActivePlayersBeforeFold = {self.opp1_name : [], self.opp2_name : [], self.myName : []}
 		self.handDict = {self.opp1_name : "", self.opp2_name : "", self.myName : ""}
