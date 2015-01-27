@@ -4,6 +4,7 @@ import sys
 import pbots_calc
 import random
 import Statistician
+import boss_hands
 
 from util import packet_parse
 """
@@ -69,18 +70,10 @@ THREE_IN_BITCH_FACTOR_TABLE = {0 : 0.99, 3 : 1, 4 : 1.1, 5 : 1.25}
 POSITION_TWO = {1: BUTTON, 1: SB, 2:BB , 3: OUT}
 POSITION_THREE = {1: BUTTON, 2: SB, 3: BB}
 
-
-
 FIRST_PRIZE  = 180
 SECOND_PRIZE = 60
 THIRD_PRIZE  = 0
 
-# Select cards
-ACES   = ["As", "Ah", "Ad", "Ac"]
-KINGS  = ["Ks", "Kh", "Kd", "Kc"]
-QUEENS = ["Qs", "Qh", "Qd", "Qc"]
-JACKS  = ["Js", "Jh", "Jd", "Jc"]
-TENS   = ["Ts", "Th", "Td", "Tc"]
 
 # ICM Helper function
 def calc_icm (a, b, c):
@@ -114,9 +107,6 @@ def calc_icm (a, b, c):
 #         self.denom = string_form[0]
 #         self.suit  = string_form[1]
 #         self.value = 
-
-
-
 
 # class Hand:
 #     def __init__ (self, string_form):
@@ -179,119 +169,6 @@ class Player:
         self.handPosition           = None
         self.opp1_skill             = 0.5
         self.opp2_skill             = 0.5
-
-        # boss-ass hands
-        self.boss_class1            = []
-        self.boss_class2            = []
-
-        # POCKET ROCKETS
-        for card1 in ACES:
-            for card2 in ACES:
-                if card1 != card2:
-                    self.boss_class1.append(card1+card2)
-
-        # POCKET KINGS
-        for card1 in KINGS:
-            for card2 in KINGS:
-                if card1 != card2:
-                    self.boss_class1.append(card1+card2)
-        
-        # POCKET QUEENS
-        for card1 in QUEENS:
-            for card2 in QUEENS:
-                if card1 != card2:
-                    self.boss_class1.append(card1+card2)
-
-        # ANNA KOURNIKOVA SUITED
-        for card1 in ACES:
-            for card2 in KINGS:
-                if card1[-1] == card2[-1]:
-                    self.boss_class1.append(card1+card2)
-                    self.boss_class1.append(card2+card1)
-
-        # ACE QUEEN SUITED
-        for card1 in ACES:
-            for card2 in QUEENS:
-                if card1[-1] == card2[-1]:
-                    self.boss_class1.append(card1+card2)
-                    self.boss_class1.append(card2+card1)
-
-        # ROYAL COUPLE SUITED
-        for card1 in KING:
-            for card2 in QUEENS:
-                if card1[-1] == card2[-1]:
-                    self.boss_class1.append(card1+card2)
-                    self.boss_class1.append(card2+card1)
-
-        # ANNA KOURNIKOVA NOT-SUITED
-        for card1 in ACES:
-            for card2 in KINGS:
-                if card1[-1] != card2[-1]:
-                    self.boss_class2.append(card1+card2)
-                    self.boss_class2.append(card2+card1)
-
-        # ACE QUEEN NOT-SUITED
-        for card1 in ACES:
-            for card2 in QUEENS:
-                if card1[-1] != card2[-1]:
-                    self.boss_class2.append(card1+card2)
-                    self.boss_class2.append(card2+card1)
-
-        # ACE JACK
-        for card1 in ACES:
-            for card2 in JACKS:
-                self.boss_class2.append(card1+card2)
-                self.boss_class2.append(card2+card1)
-
-        # ACE TEN
-        for card1 in ACES:
-            for card2 in TEN:
-                self.boss_class2.append(card1+card2)
-                self.boss_class2.append(card2+card1)
-
-        # KING QUEEN NOT-SUITED
-        for card1 in KINGS:
-            for card2 in QUEENS:
-                if card1[-1] != card2[-1]:
-                    self.boss_class2.append(card1+card2)
-                    self.boss_class2.append(card2+card1)
-
-        # KING JACK
-        for card1 in KINGS:
-            for card2 in JACKS:
-                self.boss_class2.append(card1+card2)
-                self.boss_class2.append(card2+card1)
-
-        # KING TEN
-        for card1 in KINGS:
-            for card2 in TENS:
-                self.boss_class2.append(card1+card2)
-                self.boss_class2.append(card2+card1)
-
-        # QUEEN JACK
-        for card1 in QUEENS:
-            for card2 in JACKS:
-                self.boss_class2.append(card1+card2)
-                self.boss_class2.append(card2+card1)
-
-        # QUEEN TEN
-        for card1 in QUEENS:
-            for card2 in TENS:
-                self.boss_class2.append(card1+card2)
-                self.boss_class2.append(card2+card1)
-
-        # POCKET JACKS
-        for card1 in JACKS:
-            for card2 in JACKS:
-                if card1 != card2:
-                    self.boss_class2.append(card1+card2)
-
-        # POCKET TENS
-        for card1 in TENS:
-            for card2 in TENS:
-                if card1 != card2:
-                    self.boss_class2.append(card1+card2)
-
 
 
         # precomputed equity tables for pre flop
