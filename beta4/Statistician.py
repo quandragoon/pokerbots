@@ -23,6 +23,9 @@ FOLDED  = -1
 INVALID = 0
 
 # KEYVALUE Packet Parsing
+
+VPIP_TO_PFR = 13
+VPIP_PERCENT = 12
 PFFOLD_PERCENT = 11
 PFWIN_PERCENT = 10
 FOLD_PERCENT = 9
@@ -34,11 +37,44 @@ POST = "POST"
 I_TO_NUM_BC = {0 : 0, 1 : 3, 2 : 4, 3 : 5}
 
 
+# preflop player types
+TYPE_TA  = "Tight Aggressive"
+TYPE_LP  = "Loose Passive"
+TYPE_STA = "Super Tight Aggressive"
+TYPE_LA  = "Loose Aggressive"
+TYPE_NEU = "Neutral"
+
+# player type thresh
+TIGHT_THRESH =  0.2
+LOOSE_THRESH = 0.3
+
+
 
 # Helper function
 
 def calcEWMA (alpha, new_input, old_avg):
 	return alpha * new_input + (1 - alpha) * old_avg 
+
+def classify_pre_flop_player (vpip, pfr, vpipPerc):
+	ratio = float(vpip) / pfr
+	print "RATIO : " + str(ratio)
+	print "VPIP P: " + str(vpipPerc)
+	if vpipPerc > LOOSE_THRESH: # If loose
+		if ratio < 1.4:
+			# Loose Aggressive
+			return TYPE_LA
+		if ratio > 3:
+			# Loose Passive
+			return TYPE_LP
+	elif vpipPerc < TIGHT_THRESH: # If tight
+		if ratio < 1.4:
+			# Super TIght Aggressive
+			return TYPE_STA
+	else: # Mid vpip
+		if ratio < 1.3:
+			# Tight aggressive
+			return TYPE_TA
+	return TYPE_NEU
 
 
 class Statistician:
@@ -55,10 +91,7 @@ class Statistician:
 		self.playerRaisedPreFlop = False
 		self.opponentRaisedPreFlop = False
 		# Pre-Flop Raise Count of the opponents
-		self.pfrCount = {self.opp1_name : 0, self.opp2_name : 0}
-		self.vpipCount = {self.opp1_name : 0, self.opp2_name : 0}
 		# self.threeBCount = {self.opp1_name : 0, self.opp2_name : 0}
-		self.pfrBoolean = {self.opp1_name: False, self.opp2_name: False}
 		################# POST-FLOP WIN PERCENTAGE ####################
 		################# POST-FLOP WIN PERCENTAGE ####################
 		# Post-Flop statistics below
@@ -95,7 +128,8 @@ class Statistician:
 		self.aggressionPercent = {self.opp1_name : 0, self.opp2_name : 0}
 		self.pfrPercent = {self.opp1_name : 0, self.opp2_name : 0}
 		self.pfrFoldPercent = {self.opp1_name : 0, self.opp2_name : 0}
-		self.vpipPercent = {self.opp1_name : 0, self.opp2_name : 0}
+
+
 
 		# Quan's code
 		self.equity_table_2 = {}
@@ -108,12 +142,13 @@ class Statistician:
 		# betas are used for semi exponentially weighted moving average
 		self.foldBeta         = {self.opp1_name : 0.1, self.opp2_name : 0.1}
 		self.postFlopWinBeta  = {self.opp1_name : 0.1, self.opp2_name : 0.1}
+		self.vpipBeta         = {self.opp1_name : 0.1, self.opp2_name : 0.1}
 		self.beta_inc = 0.1
-		self.beta_max = 0.5
+		self.beta_max = 0.9
 
 		# things currently used
-		self.foldCount = {self.opp1_name : 0, self.opp2_name : 0} # number of folds POSTFLOP only!
-		self.foldCountpFr = {self.opp1_name : 0, self.opp2_name : 0}
+		self.foldCount      = {self.opp1_name : 0, self.opp2_name : 0} # number of folds POSTFLOP only!
+		self.foldCountpFr   = {self.opp1_name : 0, self.opp2_name : 0}
 		self.foldPercentage = {self.opp1_name : 0.5, self.opp2_name : 0.5}
 		self.numHandsPlayed = {self.opp1_name : 0, self.opp2_name : 0} # total number of hands
 
@@ -121,8 +156,23 @@ class Statistician:
 		self.postFlopCount    = {self.opp1_name : 0, self.opp2_name : 0} # total number of hands played past preflop
 		self.postFlopWinPct   = {self.opp1_name : 0.5, self.opp2_name : 0.5}
 
-		self.averageEquityTwo     = {self.opp1_name : {0 : 0.4, 3 : 0.5, 4 : 0.6, 5 : 0.7}, self.opp2_name : {0 : 0.4, 3 : 0.5, 4 : 0.6, 5 : 0.7}}
-		self.averageEquityThree   = {self.opp1_name : {0 : 0.3, 3 : 0.4, 4 : 0.5, 5 : 0.6}, self.opp2_name : {0 : 0.3, 3 : 0.4, 4 : 0.5, 5 : 0.6}}
+		self.pfrCount    = {self.opp1_name : 0, self.opp2_name : 0}
+		self.vpipCount   = {self.opp1_name : 0, self.opp2_name : 0}
+		self.vpipPercent = {self.opp1_name : 0.3, self.opp2_name : 0.3}
+		self.vpipToPfr   = {self.opp1_name : (2,1), self.opp2_name : (2,1)}
+
+		self.vpipBoolean  = {self.opp1_name: False, self.opp2_name: False}
+		self.pfrBoolean   = {self.opp1_name: False, self.opp2_name: False}
+		self.nhpBoolean   = {self.opp1_name: False, self.opp2_name: False}
+		self.blindBoolean = {self.opp1_name: False, self.opp2_name: False}
+
+
+
+		# self.averageEquityTwo     = {self.opp1_name : {0 : 0.4, 3 : 0.5, 4 : 0.6, 5 : 0.7}, self.opp2_name : {0 : 0.4, 3 : 0.5, 4 : 0.6, 5 : 0.7}}
+		# self.averageEquityThree   = {self.opp1_name : {0 : 0.3, 3 : 0.4, 4 : 0.5, 5 : 0.6}, self.opp2_name : {0 : 0.3, 3 : 0.4, 4 : 0.5, 5 : 0.6}}
+
+		self.averageEquityTwo     = {self.opp1_name : {0 : 0.35, 3 : 0.3, 4 : 0.5, 5 : 0.5}, self.opp2_name : {0 : 0.35, 3 : 0.3, 4 : 0.5, 5 : 0.5}}
+		self.averageEquityThree   = {self.opp1_name : {0 : 0.35, 3 : 0.3, 4 : 0.4, 5 : 0.4}, self.opp2_name : {0 : 0.35, 3 : 0.3, 4 : 0.4, 5 : 0.4}}
 
 		self.minEquityTwo    = {self.opp1_name : {0 : 0.35, 3 : 0.3, 4 : 0.5, 5 : 0.5}, self.opp2_name : {0 : 0.35, 3 : 0.3, 4 : 0.5, 5 : 0.5}}
 		self.minEquityThree  = {self.opp1_name : {0 : 0.35, 3 : 0.3, 4 : 0.4, 5 : 0.4}, self.opp2_name : {0 : 0.35, 3 : 0.3, 4 : 0.4, 5 : 0.4}}
@@ -158,12 +208,22 @@ class Statistician:
 					self.foldPercentage[self.opp1_name] = history_storage["generalStats"][self.opp1_name][FOLD_PERCENT]
 				if PFWIN_PERCENT in fields:	
 					self.postFlopWinPct[self.opp1_name] = history_storage["generalStats"][self.opp1_name][PFWIN_PERCENT]
+				if VPIP_PERCENT in fields:	
+					self.vpipPercent[self.opp1_name] = history_storage["generalStats"][self.opp1_name][VPIP_PERCENT]
+				if VPIP_TO_PFR in fields:
+					self.vpipToPfr[self.opp1_name] = history_storage["generalStats"][self.opp1_name][VPIP_TO_PFR]
+
 			if self.opp2_name in history_storage["generalStats"]:
 				fields = history_storage["generalStats"][self.opp2_name].keys()
 				if FOLD_PERCENT in fields:
 					self.foldPercentage[self.opp2_name] = history_storage["generalStats"][self.opp2_name][FOLD_PERCENT]
 				if PFWIN_PERCENT in fields:		
 					self.postFlopWinPct[self.opp2_name] = history_storage["generalStats"][self.opp2_name][PFWIN_PERCENT]
+				if VPIP_PERCENT in fields:		
+					self.vpipPercent[self.opp2_name] = history_storage["generalStats"][self.opp2_name][VPIP_PERCENT]
+				if VPIP_TO_PFR in fields:
+					self.vpipToPfr[self.opp2_name] = history_storage["generalStats"][self.opp2_name][VPIP_TO_PFR]
+
 
 
 
@@ -192,10 +252,13 @@ class Statistician:
 
 
 	def updateFoldBeta (self, name):
-		self.foldBeta[name] = min(self.numHandsPlayed[name] * self.beta_inc, self.beta_max)
+		self.foldBeta[name] = min(self.postFlopCount[name] * self.beta_inc, self.beta_max)
 
 	def updatePostFlopWinBeta(self, name):
-		self.postFlopWinBeta[name] = min(self.postFlopWinCount[name] * self.beta_inc, self.beta_max)
+		self.postFlopWinBeta[name] = min(self.postFlopCount[name] * self.beta_inc, self.beta_max)
+
+	def updateVPIPBeta (self, name):
+		self.vpipBeta[name] = min(self.numHandsPlayed[name] * self.beta_inc, self.beta_max)
 
 	def recordActions (self, last_actions):
 		self.actionHistory.extend(last_actions)
@@ -205,6 +268,9 @@ class Statistician:
 	def getNumActivePlayers(self, num_active):
 		self.numActivePlayersPreflop = num_active
 
+	def getPlayerType (self, name):
+		vpipToPfrTuple = self.getVPIPtoPFR(name)
+		return classify_pre_flop_player(vpipToPfrTuple[0], vpipToPfrTuple[1], self.getVPIPPercent(name))
 
 
 	# def updateHandCount(self, name, hand_id):
@@ -243,10 +309,19 @@ class Statistician:
 
 		numActivePlayers = num_active_players
 		boardState = PREFLOP 
-		pfrBoolean = {self.opp1_name : False, self.opp2_name : False}
+		self.pfrBoolean   = {self.opp1_name : False, self.opp2_name : False}
+		self.vpipBoolean  = {self.opp1_name : False, self.opp2_name : False}
+		self.nhpBoolean   = {self.opp1_name : False, self.opp2_name : False}
+		self.blindBoolean = {self.opp1_name : False, self.opp2_name : False}
+
 
 		for act in self.actionHistory:
 			act_split = act.split(":")
+
+			if act_split[0] == POST:
+				if act_split[-1] != self.myName:
+					self.blindBoolean[act_split[-1]] = True
+
 
 			if act_split[0] == FOLD:
 				numActivePlayers -= 1
@@ -257,7 +332,6 @@ class Statistician:
 					else:
 						# only consider "played" if played past PREFLOP
 						self.foldCount[act_split[-1]] += 1
-						self.numHandsPlayed[act_split[-1]] += 1
 
 			elif act_split[0] == DEAL: 
 				boardState = act_split[1]
@@ -287,8 +361,6 @@ class Statistician:
 				action_before = (self.actionHistory[prev_index].split(":"))[0]
 				action_before_before = (self.actionHistory[prev_index - 1].split(":"))[0]
 				name = act_split[-1]
-				if name != self.myName:
-					self.numHandsPlayed[name] += 1
 				if action_before == DEAL or action_before == CHECK or action_before_before == CHECK:
 					self.numActivePlayersBeforeFold[name].append(INVALID)
 				else:
@@ -302,8 +374,12 @@ class Statistician:
 				if act_split[-1] != self.myName:
 					self.raiseCount[act_split[-1]] += 1
 					if boardState == PREFLOP:
-						self.pfrCount[act_split[-1]] += 1
-						pfrBoolean[act_split[-1]] = True
+						if self.vpipBoolean[act_split[-1]] == False:
+							self.vpipCount[act_split[-1]] += 1
+							self.vpipBoolean[act_split[-1]] = True
+						if self.pfrBoolean[act_split[-1]] == False:
+							self.pfrCount[act_split[-1]] += 1
+							self.pfrBoolean[act_split[-1]] = True
 
 			elif act_split[0] == BET:
 				if act_split[-1] != self.myName:
@@ -312,6 +388,11 @@ class Statistician:
 			elif act_split[0] == CALL:
 				if act_split[-1] != self.myName: 
 					self.callCount[act_split[-1]] += 1
+					if boardState == PREFLOP:
+						if self.blindBoolean[act_split[-1]] == False or act_split[1] > 2:
+							if self.vpipBoolean[act_split[-1]] == False:
+								self.vpipCount[act_split[-1]] += 1
+								self.vpipBoolean[act_split[-1]] = True
 
 			elif act_split[0] == CHECK:
 				if act_split[-1] != self.myName:
@@ -332,6 +413,10 @@ class Statistician:
 
 			if act_split[0] in [POST, CALL, BET, RAISE, CHECK, FOLD]:
 				self.madeActionLastRound[act_split[-1]] = True
+				if act_split[-1] != self.myName and boardState == PREFLOP:
+					if self.nhpBoolean[act_split[-1]] == False:
+						self.numHandsPlayed[act_split[-1]] += 1
+						self.nhpBoolean[act_split[-1]] = True
 
 		# Compute equity
 		for name in [self.opp1_name, self.opp2_name]:
@@ -508,6 +593,8 @@ class Statistician:
 		for name in [self.opp1_name, self.opp2_name]:
 			self.foldPercentage[name] = self.getFoldPercent(name)
 			self.postFlopWinPct[name] = self.getPostFlopWinPct(name)
+			self.vpipPercent[name]    = self.getVPIPPercent(name)
+			self.vpipToPfr[name]      = self.getVPIPtoPFR(name)
 
 
 
@@ -516,11 +603,15 @@ class Statistician:
 		self.getAggressionPercent()
 		# self.getVPIPPercent()
 
-		generalStats = {self.opp1_name : {FOLD_PERCENT : self.foldPercentage[self.opp1_name], 
-											AGGR_PERCENT : self.aggressionPercent[self.opp1_name], 
+		generalStats = {self.opp1_name : {FOLD_PERCENT    : self.foldPercentage[self.opp1_name], 
+											AGGR_PERCENT  : self.aggressionPercent[self.opp1_name], 
+											VPIP_PERCENT  : self.vpipPercent[self.opp1_name],
+											VPIP_TO_PFR   : self.vpipToPfr[self.opp1_name],
 											PFWIN_PERCENT : self.postFlopWinPct[self.opp1_name]},
-						self.opp2_name : {FOLD_PERCENT : self.foldPercentage[self.opp2_name], 
-											AGGR_PERCENT : self.aggressionPercent[self.opp2_name], 
+						self.opp2_name : {FOLD_PERCENT    : self.foldPercentage[self.opp2_name], 
+											AGGR_PERCENT  : self.aggressionPercent[self.opp2_name], 
+											VPIP_PERCENT  : self.vpipPercent[self.opp2_name],
+											VPIP_TO_PFR   : self.vpipToPfr[self.opp1_name],
 											PFWIN_PERCENT : self.postFlopWinPct[self.opp2_name]}}
 
 
@@ -596,7 +687,7 @@ class Statistician:
 			self.pfrFoldPercent[opponent_name] = float(self.foldCountpFr[opponent_name]) / self.numHandsPlayed[opponent_name]
 
 	def getFoldPercent(self, name):
-		if self.numHandsPlayed[name] == 0:
+		if self.postFlopCount[name] == 0:
 			return self.foldPercentage[name]
 		self.updateFoldBeta(name)
 		return calcEWMA (self.foldBeta[name], float(self.foldCount[name]) / self.postFlopCount[name], self.foldPercentage[name])
@@ -611,9 +702,17 @@ class Statistician:
 		for opponent_name in [self.opp1_name, self.opp2_name]:
 			self.aggressionPercent[opponent_name] = float(self.raiseCount[opponent_name] + self.betCount[opponent_name]) / (self.raiseCount[opponent_name] + self.betCount[opponent_name] + self.callCount[opponent_name] + self.foldCount[opponent_name])
 
-	def getVPIPPercent(self):
-		for opponent_name in [self.opp1_name, self.opp2_name]:
-			self.vpipPercent[opponent_name] = self.vpipCount[opponent_name] / self.numHandsPlayed[opponent_name]
+	def getVPIPPercent(self, name):
+		if self.numHandsPlayed[name] == 0:
+			return self.vpipPercent[name]
+		self.updateVPIPBeta(name)
+		return calcEWMA (self.vpipBeta[name], float(self.vpipCount[name]) / self.numHandsPlayed[name], self.vpipPercent[name])
+		# for opponent_name in [self.opp1_name, self.opp2_name]:
+		# 	self.vpipPercent[opponent_name] = self.vpipCount[opponent_name] / self.numHandsPlayed[opponent_name]
+
+	def getVPIPtoPFR(self, name):
+		return (self.vpipToPfr[name][0] + self.vpipCount[name], self.vpipToPfr[name][1] + self.pfrCount[name])
+
 
 
 	# def processPreflopStatistics(self, opponent_names, hand_statistics, playerAction):

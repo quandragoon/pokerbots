@@ -45,10 +45,10 @@ LOTS_OF_CHIPS    = 400
 SUFFICIENT_CHIPS = 100
 
 # equity threshold
-THREE_FOLD_THRES_TABLE  = {0 : 0.25, 3 : 0.15, 4 : 0.2, 5 : 0.2}
-THREE_RAISE_THRES_TABLE = {0 : 0.36, 3 : 0.5,  4 : 0.7, 5 : 0.8}
-TWO_FOLD_THRES_TABLE    = {0 : 0.4,  3 : 0.25, 4 : 0.2,  5 : 0.2}
-TWO_RAISE_THRES_TABLE   = {0 : 0.6,  3 : 0.7,  4 : 0.75,  5 : 0.8}
+THREE_FOLD_THRES_TABLE  = {0 : 0.38, 3 : 0.2,  4 : 0.2,  5 : 0.2}
+THREE_RAISE_THRES_TABLE = {0 : 0.45, 3 : 0.6,  4 : 0.7,  5 : 0.8}
+TWO_FOLD_THRES_TABLE    = {0 : 0.55, 3 : 0.35, 4 : 0.3,  5 : 0.3}
+TWO_RAISE_THRES_TABLE   = {0 : 0.65, 3 : 0.7,  4 : 0.75, 5 : 0.8}
 
 BET_SMALL_LIKELIHOOD = {0 : 150, 3 : 130, 4 : 100, 5 : 80}
 
@@ -384,20 +384,20 @@ class Player:
 
             other_guy_stacksize = self.opp_dict[guy_active].original_stacksize
 
-            if other_guy_stacksize <= 0.05*self.my_original_stacksize:
-                "$$$ THIS IS PROB NEVER TRUE"
-                return True
+            # if other_guy_stacksize <= 0.05*self.my_original_stacksize:
+            #     "$$$ THIS IS PROB NEVER TRUE"
+            #     return True
 
-            else:
-                bitch_factor = TWO_IN_BITCH_FACTOR_TABLE[self.num_boardcards]
-                fold_chips = self.my_stacksize
-                call_lose_chips = self.my_stacksize - self.inc_call_amount
-                call_win_chips = self.my_stacksize + self.potsize
-                print "FOLD CHIPS: " + str(fold_chips * bitch_factor)
-                print "EXP CHIPS : " + str(call_lose_chips*(1-equity) + call_win_chips*equity)
-                lhs = fold_chips * bitch_factor
-                rhs = call_lose_chips*(1-equity) + call_win_chips*equity
-                return lhs < rhs
+            # else:
+            bitch_factor = TWO_IN_BITCH_FACTOR_TABLE[self.num_boardcards]
+            fold_chips = self.my_stacksize
+            call_lose_chips = self.my_stacksize - self.inc_call_amount
+            call_win_chips = self.my_stacksize + self.potsize
+            print "FOLD CHIPS: " + str(fold_chips * bitch_factor)
+            print "EXP CHIPS : " + str(call_lose_chips*(1-equity) + call_win_chips*equity)
+            lhs = fold_chips * bitch_factor
+            rhs = call_lose_chips*(1-equity) + call_win_chips*equity
+            return lhs < rhs
 
         else: # all three players have chips
             opp_names = self.opp_dict.keys()
@@ -514,6 +514,9 @@ class Player:
             for name in self.opp_dict:
                 if self.opp_dict[name].status == ACTIVE:
                     guy_active = name
+                # DEBUG
+                playerType = self.STATS.getPlayerType(name)
+                print "PLAYER_TYPE : " + str(playerType)
             minEquity = self.STATS.minEquityTwo[guy_active][self.num_boardcards]
             avgEquity = self.STATS.averageEquityTwo[guy_active][self.num_boardcards]
         else:
@@ -522,18 +525,22 @@ class Player:
 
         if should:
             print "$$$ SHOULD"
-            if self.num_boardcards != 0 and equity < minEquity:
+            if self.inc_call_amount < 0.05 * self.potsize:
+                return True
+            if self.num_boardcards != 0 and equity < avgEquity:
                 print "$$$ BUT NO"
                 return False
             else:
                 return True
-        else:
-            print "$$$ SHOULD NOT"
-            if equity > avgEquity:
-                print "$$$ BUT YES"
-                return True
-            else:
-                return False
+
+        return False
+        # else:
+        #     print "$$$ SHOULD NOT"
+        #     if equity > avgEquity:
+        #         print "$$$ BUT YES"
+        #         return True
+        #     else:
+        #         return False
 
 
 
@@ -590,7 +597,8 @@ class Player:
             # TODO: Implement bluffing / call here
             if CHECK in avail_actions:
                 # bet a little bit if possible to exploit bots who fold to small raises: (but dont do this all the time)
-                if BET in avail_actions and self.my_stacksize > BET_SMALL_LIKELIHOOD[self.num_boardcards]:
+                # if BET in avail_actions and self.my_stacksize > BET_SMALL_LIKELIHOOD[self.num_boardcards]:
+                if False:
                     random_nig = random.random()
                     # foldPerc = 0.0
                     # for name in self.opp_dict:
