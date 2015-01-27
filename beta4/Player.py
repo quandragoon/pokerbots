@@ -63,7 +63,6 @@ POWER = 4
 FOLD_PERCENT = 9
 AGGR_PERCENT = 8
 
-# ITER_TABLE = {0 : 30000, 3 : 30000, 4 : 30000, 5 : 30000}
 MONTE_CARLO_ITER = 30000
 DELTA_ITER       = 5000
 # BITCH_FACTOR_TABLE = {0 : 0.75, 3 : 0.8, 4 : 0.9, 5 : 1}
@@ -74,10 +73,6 @@ THREE_IN_BITCH_FACTOR_TABLE = {0 : 0.99, 3 : 1, 4 : 1.1, 5 : 1.25}
 POSITION_TWO = {1: BUTTON, 1: SB, 2:BB , 3: OUT}
 POSITION_THREE = {1: BUTTON, 2: SB, 3: BB}
 
-
-
-# print pbots_calc.calc("AhKh:xx", "ThJhQh2s7s", "", 1)
-# print pbots_calc.calc("AhKh:xx:xx", "JhQh2s7s", "", 100)
 
 
 FIRST_PRIZE  = 180
@@ -222,9 +217,6 @@ class Player:
 
         self.my_name = received_packet['player_name']
 
-        ###############################################################################################
-        self.STATS = Statistician.Statistician(self.my_name, self.opponent_1_name, self.opponent_2_name)
-        ###############################################################################################
 
         self.opp_dict[self.opponent_1_name] = Opponent(self.opponent_1_name)
         self.opp_dict[self.opponent_2_name] = Opponent(self.opponent_2_name)
@@ -233,9 +225,6 @@ class Player:
         self.time_low_thres  = 0.3 * self.time_bank
         self.time_per_hand   = 2 * self.time_bank / received_packet['num_hands']  
 
-        ###############################################################################################
-        self.STATS.getPrecomputedHashtables(self.equity_table_2, self.equity_table_3) 
-        ###############################################################################################
 
         # If we have already played the opponent before, 
         # we load their statistics from the previous encounter
@@ -264,9 +253,18 @@ class Player:
             self.handPosition = POSITION_TWO[self.my_seat]
         else:
             self.handPosition = POSITION_THREE[self.my_seat]
+
         ###############################################################################################
+        # see if we STATS has been initialized
+        if self.STATS == None:
+            self.STATS = Statistician.Statistician(self.my_name, self.opponent_1_name, self.opponent_2_name)
+            self.STATS.getPrecomputedHashtables(self.equity_table_2, self.equity_table_3) 
+            self.STATS.loadDataFromHistoryStorage(self.history_storage)
+            print "===> STORAGE: " + str (self.history_storage)
+
         self.STATS.getNumActivePlayers(self.num_active_players)
         ###############################################################################################
+
         self.list_of_active_players = received_packet['active_players']
 
         # adjust iterations
@@ -297,7 +295,7 @@ class Player:
                 if (self.opp_dict[name].stack_size == 0 and self.opp_dict[name].status != OUT):
                     self.opp_dict[name].status = OUT
                     ###############################################################################################
-                    self.STATS.updateHandCount(name, self.hand_id - 1)
+                    # self.STATS.updateHandCount(name, self.hand_id - 1)
                     ###############################################################################################
                 else:
                     self.opp_dict[name].status = ACTIVE
@@ -400,13 +398,7 @@ class Player:
                 return lhs < rhs
 
         else: # all three players have chips
-            ###############################################################################################
-            self.STATS.getPostFlopWinPct()
-            ###############################################################################################
             opp_names = self.opp_dict.keys()
-
-            skill_a = 0.5
-            skill_b = 0.5
 
             one_folded = False
 
@@ -423,9 +415,15 @@ class Player:
                 call_lose_ew = calc_icm(self.my_stacksize-self.inc_call_amount, self.opp_dict[guy_active].stack_size+self.potsize+self.inc_call_amount, self.opp_dict[guy_folded].stack_size)[0]
 
             else: # all three are still in hand
-                if min(self.STATS.postFlopCount.values()) > 10 and not self.STATS.postFlopWinPct[opp_names[0]] == 0 and self.STATS.postFlopWinPct[opp_names[1]] == 0:
-                    skill_a = self.STATS.postFlopWinPct[opp_names[0]] / (self.STATS.postFlopWinPct[opp_names[0]] + self.STATS.postFlopWinPct[opp_names[1]])
-                    skill_b = self.STATS.postFlopWinPct[opp_names[1]] / (self.STATS.postFlopWinPct[opp_names[0]] + self.STATS.postFlopWinPct[opp_names[1]])
+                winPercA = self.STATS.getPostFlopWinPct(opp_names[0])
+                winPercB = self.STATS.getPostFlopWinPct(opp_names[1])
+
+                skill_a = winPercA / (winPercA + winPercB)
+                skill_b = 1 - skill_a
+
+                # if min(self.STATS.postFlopCount.values()) > 10 and not self.STATS.postFlopWinPct[opp_names[0]] == 0 and self.STATS.postFlopWinPct[opp_names[1]] == 0:
+                #     skill_a = self.STATS.postFlopWinPct[opp_names[0]] / (self.STATS.postFlopWinPct[opp_names[0]] + self.STATS.postFlopWinPct[opp_names[1]])
+                #     skill_b = self.STATS.postFlopWinPct[opp_names[1]] / (self.STATS.postFlopWinPct[opp_names[0]] + self.STATS.postFlopWinPct[opp_names[1]])
 
                 fold_ew_a      = calc_icm(self.my_stacksize, self.opp_dict[opp_names[0]].stack_size+self.potsize, self.opp_dict[opp_names[1]].stack_size)[0]
                 fold_ew_b      = calc_icm(self.my_stacksize, self.opp_dict[opp_names[0]].stack_size             , self.opp_dict[opp_names[1]].stack_size+self.potsize)[0]
@@ -584,6 +582,8 @@ class Player:
 
         own_a_lot_of_chips = self.my_stacksize > LOTS_OF_CHIPS
 
+        # TODO: Raise a little if they checked last turn
+
         if equity < self.fold_thres and ((own_a_lot_of_chips != True) or (self.num_boardcards != 0)):
             # TODO: Implement bluffing / call here
             if CHECK in avail_actions:
@@ -602,6 +602,7 @@ class Player:
                 return CHECK
             return FOLD
 
+        # TODO: STOP RERAISING
         # elif equity > self.raise_thres and (self.is_new_round or do_reraise): 
         elif equity > self.raise_thres:
             "$$$ IN BET"
@@ -698,8 +699,7 @@ class Player:
 
     def handover_handler(self, received_packet):
         ###############################################################################################
-        self.STATS.updateOpponentStatistics(received_packet, self.hand_id, self.num_active_players)
-        print self.history_storage
+        self.STATS.updateOpponentStatistics(received_packet, self.hand_id, self.num_active_players, self.monte_carlo_iter / 5)
         ###############################################################################################
 
     def requestkeyvalue_handler(self, received_packet):

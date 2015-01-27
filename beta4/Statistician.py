@@ -23,6 +23,8 @@ FOLDED  = -1
 INVALID = 0
 
 # KEYVALUE Packet Parsing
+PFFOLD_PERCENT = 11
+PFWIN_PERCENT = 10
 FOLD_PERCENT = 9
 AGGR_PERCENT = 8
 
@@ -31,6 +33,14 @@ POST = "POST"
 
 I_TO_NUM_BC = {0 : 0, 1 : 3, 2 : 4, 3 : 5}
 
+
+
+# Helper function
+
+def calcEWMA (alpha, new_input, old_avg):
+	return alpha * new_input + (1 - alpha) * old_avg 
+
+
 class Statistician:
 
 	def __init__(self, myName, opp1, opp2):
@@ -38,7 +48,7 @@ class Statistician:
 		# self.myStatus = True
 		self.opp1_name = opp1
 		self.opp2_name = opp2
-		self.numHandsPlayed = {self.opp1_name : 0, self.opp2_name : 0}
+		
 		self.winCount = {self.opp1_name : 0, self.opp2_name : 0}
 		self.myWinCount = 0
 		self.myRaiseCount = 0
@@ -48,25 +58,20 @@ class Statistician:
 		self.pfrCount = {self.opp1_name : 0, self.opp2_name : 0}
 		self.vpipCount = {self.opp1_name : 0, self.opp2_name : 0}
 		# self.threeBCount = {self.opp1_name : 0, self.opp2_name : 0}
-		self.foldCountpFr = {self.opp1_name : 0, self.opp2_name : 0}
 		self.pfrBoolean = {self.opp1_name: False, self.opp2_name: False}
 		################# POST-FLOP WIN PERCENTAGE ####################
-		self.postFlopWinCount = {self.opp1_name : 0, self.opp2_name : 0}
-		self.postFlopCount    = {self.opp1_name : 0, self.opp2_name : 0}
-		self.postFlopWinPct   = {self.opp1_name : 0, self.opp2_name : 0}
 		################# POST-FLOP WIN PERCENTAGE ####################
 		# Post-Flop statistics below
 		# True if we have gone to Flop, False Otherwise
-		self.playerSeenFlop = False
-		self.playerSeenTurn = False
-		self.playerSeenRiver = False
-		self.playerSeenShowdown = False
+		# self.playerSeenFlop = False
+		# self.playerSeenTurn = False
+		# self.playerSeenRiver = False
+		# self.playerSeenShowdown = False
 		# Determine how many times each opponent goes to Flop
 		# self.aggressionPercent = {self.opp1_name : 0, self.opp2_name : 0}
 		self.raiseCount = {self.opp1_name : 0, self.opp2_name : 0}
 		self.betCount = {self.opp1_name : 0, self.opp2_name : 0}
 		self.callCount = {self.opp1_name : 0, self.opp2_name : 0}
-		self.foldCount = {self.opp1_name : 0, self.opp2_name : 0}
 		self.checkCount = {self.opp1_name : 0, self.opp2_name : 0}
 		# How many times opp goes to showdown after the flop
 		self.twoPlayershowdownCount = {self.opp1_name : 0, self.opp2_name : 0}
@@ -84,33 +89,88 @@ class Statistician:
 		# self.numActivePlayersFlop = 0
 		# self.numActivePlayersTurn = 0
 		# self.numActivePlayersRiver = 0
-		self.equity_table_2 = {}
-		self.equity_table_3 = {}
 
-
-		self.averageEquityTwo     = {self.opp1_name : {0 : 0.4, 3 : 0.5, 4 : 0.6, 5 : 0.7}, self.opp2_name : {0 : 0.4, 3 : 0.5, 4 : 0.6, 5 : 0.7}}
-		self.averageEquityThree   = {self.opp1_name : {0 : 0.3, 3 : 0.4, 4 : 0.5, 5 : 0.6}, self.opp2_name : {0 : 0.3, 3 : 0.4, 4 : 0.5, 5 : 0.6}}
-
-		self.minEquityTwo    = {self.opp1_name : {0 : 0.35, 3 : 0.3, 4 : 0.5, 5 : 0.6}, self.opp2_name : {0 : 0.35, 3 : 0.3, 4 : 0.5, 5 : 0.6}}
-		self.minEquityThree  = {self.opp1_name : {0 : 0.35, 3 : 0.3, 4 : 0.5, 5 : 0.5}, self.opp2_name : {0 : 0.35, 3 : 0.3, 4 : 0.5, 5 : 0.5}}
 
 		# ====== PERCENTAGES ==========
-		self.foldPercentage = {self.opp1_name : 0, self.opp2_name : 0}
 		self.aggressionPercent = {self.opp1_name : 0, self.opp2_name : 0}
 		self.pfrPercent = {self.opp1_name : 0, self.opp2_name : 0}
 		self.pfrFoldPercent = {self.opp1_name : 0, self.opp2_name : 0}
 		self.vpipPercent = {self.opp1_name : 0, self.opp2_name : 0}
 
 		# Quan's code
+		self.equity_table_2 = {}
+		self.equity_table_3 = {}
 		self.actionHistory = []
 		self.numActivePlayersBeforeFold = {self.opp1_name : [], self.opp2_name : [], self.myName : []}
 		self.handDict = {self.opp1_name : "", self.opp2_name : "", self.myName : ""}
 		self.madeActionLastRound = {self.opp1_name : False, self.opp2_name : False, self.myName : False}
-		self.alpha = 0.2
+		self.alpha    = 0.2 # used for equity computation
+		# betas are used for semi exponentially weighted moving average
+		self.foldBeta         = {self.opp1_name : 0.1, self.opp2_name : 0.1}
+		self.postFlopWinBeta  = {self.opp1_name : 0.1, self.opp2_name : 0.1}
+		self.beta_inc = 0.1
+		self.beta_max = 0.5
+
+		# things currently used
+		self.foldCount = {self.opp1_name : 0, self.opp2_name : 0} # number of folds POSTFLOP only!
+		self.foldCountpFr = {self.opp1_name : 0, self.opp2_name : 0}
+		self.foldPercentage = {self.opp1_name : 0.5, self.opp2_name : 0.5}
+		self.numHandsPlayed = {self.opp1_name : 0, self.opp2_name : 0} # total number of hands
+
+		self.postFlopWinCount = {self.opp1_name : 0, self.opp2_name : 0}
+		self.postFlopCount    = {self.opp1_name : 0, self.opp2_name : 0} # total number of hands played past preflop
+		self.postFlopWinPct   = {self.opp1_name : 0.5, self.opp2_name : 0.5}
+
+		self.averageEquityTwo     = {self.opp1_name : {0 : 0.4, 3 : 0.5, 4 : 0.6, 5 : 0.7}, self.opp2_name : {0 : 0.4, 3 : 0.5, 4 : 0.6, 5 : 0.7}}
+		self.averageEquityThree   = {self.opp1_name : {0 : 0.3, 3 : 0.4, 4 : 0.5, 5 : 0.6}, self.opp2_name : {0 : 0.3, 3 : 0.4, 4 : 0.5, 5 : 0.6}}
+
+		self.minEquityTwo    = {self.opp1_name : {0 : 0.35, 3 : 0.3, 4 : 0.5, 5 : 0.5}, self.opp2_name : {0 : 0.35, 3 : 0.3, 4 : 0.5, 5 : 0.5}}
+		self.minEquityThree  = {self.opp1_name : {0 : 0.35, 3 : 0.3, 4 : 0.4, 5 : 0.4}, self.opp2_name : {0 : 0.35, 3 : 0.3, 4 : 0.4, 5 : 0.4}}
+
+
+	def loadDataFromHistoryStorage(self, history_storage):
+		# min equity data
+		if "minEquityTwo" in history_storage and "minEquityThree" in history_storage:
+			if self.opp1_name in history_storage["minEquityTwo"]:
+				self.minEquityTwo[self.opp1_name] = history_storage["minEquityTwo"][self.opp1_name]
+			if self.opp1_name in history_storage["minEquityThree"]:
+				self.minEquityThree[self.opp1_name] = history_storage["minEquityThree"][self.opp1_name]
+			if self.opp2_name in history_storage["minEquityTwo"]:
+				self.minEquityTwo[self.opp2_name] = history_storage["minEquityTwo"][self.opp2_name]
+			if self.opp2_name in history_storage["minEquityThree"]:
+				self.minEquityThree[self.opp2_name] = history_storage["minEquityThree"][self.opp2_name]
+
+			# avg equity data
+			if self.opp1_name in history_storage["averageEquityTwo"]:
+				self.averageEquityTwo[self.opp1_name] = history_storage["averageEquityTwo"][self.opp1_name]
+			if self.opp1_name in history_storage["averageEquityThree"]:
+				self.averageEquityThree[self.opp1_name] = history_storage["averageEquityThree"][self.opp1_name]
+			if self.opp2_name in history_storage["averageEquityTwo"]:
+				self.averageEquityTwo[self.opp2_name] = history_storage["averageEquityTwo"][self.opp2_name]
+			if self.opp2_name in history_storage["averageEquityThree"]:
+				self.averageEquityThree[self.opp2_name] = history_storage["averageEquityThree"][self.opp2_name]
+
+		# general stats
+		if "generalStats" in history_storage:
+			if self.opp1_name in history_storage["generalStats"]:
+				fields = history_storage["generalStats"][self.opp1_name].keys()
+				if FOLD_PERCENT in fields:
+					self.foldPercentage[self.opp1_name] = history_storage["generalStats"][self.opp1_name][FOLD_PERCENT]
+				if PFWIN_PERCENT in fields:	
+					self.postFlopWinPct[self.opp1_name] = history_storage["generalStats"][self.opp1_name][PFWIN_PERCENT]
+			if self.opp2_name in history_storage["generalStats"]:
+				fields = history_storage["generalStats"][self.opp2_name].keys()
+				if FOLD_PERCENT in fields:
+					self.foldPercentage[self.opp2_name] = history_storage["generalStats"][self.opp2_name][FOLD_PERCENT]
+				if PFWIN_PERCENT in fields:		
+					self.postFlopWinPct[self.opp2_name] = history_storage["generalStats"][self.opp2_name][PFWIN_PERCENT]
 
 
 
-	def calculateEquityStat (self, name, hand, numActivePlayersBeforeFold, boardcards):
+
+
+
+	def calculateEquityStat (self, name, hand, numActivePlayersBeforeFold, boardcards, iter):
 		for i in range(len(numActivePlayersBeforeFold)):
 			numBc = I_TO_NUM_BC[i]
 			if numActivePlayersBeforeFold[i] == 2:
@@ -118,23 +178,28 @@ class Statistician:
 				if numBc == 0:
 					eq = self.equity_table_2[hand]
 				else:
-					eq = pbots_calc.calc(':'.join([hand, 'xx']), ''.join(boardcards[:numBc]), "", 1000).ev[0]
+					eq = pbots_calc.calc(':'.join([hand, 'xx']), ''.join(boardcards[:numBc]), "", iter).ev[0]
 				self.minEquityTwo[name][numBc] = min(eq, self.minEquityTwo[name][numBc])
-				self.averageEquityTwo[name][numBc] = self.alpha * eq + (1 - self.alpha) * self.averageEquityTwo[name][numBc]
+				self.averageEquityTwo[name][numBc] = calcEWMA (self.alpha, eq, self.averageEquityTwo[name][numBc])
 			elif numActivePlayersBeforeFold[i] == 3:
 				eq = 0
 				if i == 0:
 					eq = self.equity_table_3[hand]
 				else:
-					eq = pbots_calc.calc(':'.join([hand, 'xx', 'xx']), ''.join(boardcards[:numBc]), "", 1000).ev[0]
+					eq = pbots_calc.calc(':'.join([hand, 'xx', 'xx']), ''.join(boardcards[:numBc]), "", iter).ev[0]
 				self.minEquityThree[name][numBc] = min(eq, self.minEquityThree[name][numBc])
-				self.averageEquityThree[name][numBc] = self.alpha * eq + (1 - self.alpha) * self.averageEquityThree[name][numBc]
+				self.averageEquityThree[name][numBc] = calcEWMA (self.alpha, eq, self.averageEquityThree[name][numBc])
 
 
+	def updateFoldBeta (self, name):
+		self.foldBeta[name] = min(self.numHandsPlayed[name] * self.beta_inc, self.beta_max)
+
+	def updatePostFlopWinBeta(self, name):
+		self.postFlopWinBeta[name] = min(self.postFlopWinCount[name] * self.beta_inc, self.beta_max)
 
 	def recordActions (self, last_actions):
 		self.actionHistory.extend(last_actions)
-		print "====> History: " + repr(self.actionHistory)
+		# print "====> History: " + repr(self.actionHistory)
 
 
 	def getNumActivePlayers(self, num_active):
@@ -142,13 +207,13 @@ class Statistician:
 
 
 
-	def updateHandCount(self, name, hand_id):
-		self.numHandsPlayed[name] = hand_id
+	# def updateHandCount(self, name, hand_id):
+	# 	self.numHandsPlayed[name] = hand_id
 
 
 	# Update opponent statistics after each hand
 	# playerAction is the most recent action that our player took
-	def updateOpponentStatistics(self, received_packet, hand_id, num_active_players):		
+	def updateOpponentStatistics(self, received_packet, hand_id, num_active_players, monte_carlo_iter):		
 
 
 		# if received_packet['packet_name'] == "GETACTION":
@@ -189,26 +254,32 @@ class Statistician:
 				if act_split[-1] != self.myName: 
 					if boardState == PREFLOP:
 						self.foldCountpFr[act_split[-1]] += 1
-					self.foldCount[act_split[-1]] += 1
+					else:
+						# only consider "played" if played past PREFLOP
+						self.foldCount[act_split[-1]] += 1
+						self.numHandsPlayed[act_split[-1]] += 1
 
 			elif act_split[0] == DEAL: 
+				boardState = act_split[1]
 				prev_index =  self.actionHistory.index(act) - 1
 				action_before = (self.actionHistory[prev_index].split(":"))[0]
 				action_before_before = (self.actionHistory[prev_index - 1].split(":"))[0]
 				# if nigga has two consecutive deals
-				if action_before == DEAL or (action_before == CHECK and boardState != PREFLOP) or action_before_before == CHECK:
+				if action_before == DEAL or (action_before == CHECK and boardState != FLOP) or action_before_before == CHECK:
 					for name in self.numActivePlayersBeforeFold.keys():
 						self.numActivePlayersBeforeFold[name].append(INVALID)
 				else:
 					for name in self.numActivePlayersBeforeFold.keys():
 						if self.numActivePlayersBeforeFold[name] == [] or self.numActivePlayersBeforeFold[name][-1] != FOLDED:
+							if name != self.myName and boardState == FLOP:
+								# went past FLOP
+								self.postFlopCount[name] += 1
 							if self.madeActionLastRound[name]:
 								self.numActivePlayersBeforeFold[name].append(numActivePlayers)
 							else:
 								self.numActivePlayersBeforeFold[name].append(INVALID)
 						else:
 							self.numActivePlayersBeforeFold[name].append(FOLDED)
-				boardState = act_split[1]
 				self.madeActionLastRound = {self.opp1_name : False, self.opp2_name : False, self.myName : False}
 
 			elif act_split[0] == SHOW:
@@ -216,6 +287,8 @@ class Statistician:
 				action_before = (self.actionHistory[prev_index].split(":"))[0]
 				action_before_before = (self.actionHistory[prev_index - 1].split(":"))[0]
 				name = act_split[-1]
+				if name != self.myName:
+					self.numHandsPlayed[name] += 1
 				if action_before == DEAL or action_before == CHECK or action_before_before == CHECK:
 					self.numActivePlayersBeforeFold[name].append(INVALID)
 				else:
@@ -253,7 +326,7 @@ class Statistician:
 				win_amount = int(act_split[-2])
 				if boardState != PREFLOP:
 					if winner != self.myName:
-						self.postFlopCount[winner] += 1
+						# self.postFlopCount[winner] += 1
 						self.postFlopWinCount[winner] += 1
 
 
@@ -264,7 +337,7 @@ class Statistician:
 		for name in [self.opp1_name, self.opp2_name]:
 			# if len(self.numActivePlayersBeforeFold[name]) == 4 and self.numActivePlayersBeforeFold[name][-1] != FOLDED:
 			if self.handDict[name] != "":
-				self.calculateEquityStat(name, self.handDict[name], self.numActivePlayersBeforeFold[name], received_packet['boardcards'])
+				self.calculateEquityStat(name, self.handDict[name], self.numActivePlayersBeforeFold[name], received_packet['boardcards'], monte_carlo_iter)
 
 
 		# print "====> SHITs  : " + repr(self.numActivePlayersBeforeFold)
@@ -425,25 +498,30 @@ class Statistician:
 			# self.numActivePlayersTurn = 0
 			# self.numActivePlayersRiver = 0
 
-	def getPostFlopWinPct(self):
-		if self.postFlopCount[self.opp1_name] > 0:
-			self.postFlopWinPct[self.opp1_name] = float(self.postFlopWinCount[self.opp1_name]) / self.postFlopCount[self.opp1_name]
-		if self.postFlopCount[self.opp2_name] > 0:
-			self.postFlopWinPct[self.opp2_name] = float(self.postFlopWinCount[self.opp2_name]) / self.postFlopCount[self.opp2_name]
 
 	def compileMatchStatistics(self, hand_id, socket):
-		for opponent_name in [self.opp1_name, self.opp2_name]:
-			if self.numHandsPlayed[opponent_name] == 0:
-				self.numHandsPlayed[opponent_name] = hand_id
+		# for opponent_name in [self.opp1_name, self.opp2_name]:
+		# 	if self.numHandsPlayed[opponent_name] == 0:
+		# 		self.numHandsPlayed[opponent_name] = hand_id
 
-		self.getPFR()
-		self.getPFRFold()
-		self.getFoldPercent()
+		# calculate new fold percentages and post flop win percentages
+		for name in [self.opp1_name, self.opp2_name]:
+			self.foldPercentage[name] = self.getFoldPercent(name)
+			self.postFlopWinPct[name] = self.getPostFlopWinPct(name)
+
+
+
+		# self.getPFR()
+		# self.getPFRFold()
 		self.getAggressionPercent()
-		self.getVPIPPercent()
+		# self.getVPIPPercent()
 
-		generalStats = {self.opp1_name : {FOLD_PERCENT : self.foldPercentage[self.opp1_name], AGGR_PERCENT : self.aggressionPercent[self.opp1_name]}, 
-						self.opp2_name : {FOLD_PERCENT : self.foldPercentage[self.opp2_name], AGGR_PERCENT : self.aggressionPercent[self.opp2_name]}}
+		generalStats = {self.opp1_name : {FOLD_PERCENT : self.foldPercentage[self.opp1_name], 
+											AGGR_PERCENT : self.aggressionPercent[self.opp1_name], 
+											PFWIN_PERCENT : self.postFlopWinPct[self.opp1_name]},
+						self.opp2_name : {FOLD_PERCENT : self.foldPercentage[self.opp2_name], 
+											AGGR_PERCENT : self.aggressionPercent[self.opp2_name], 
+											PFWIN_PERCENT : self.postFlopWinPct[self.opp2_name]}}
 		socket.send("PUT " + "averageEquityTwo "   + str(self.averageEquityTwo) + "\n")
 		socket.send("PUT " + "averageEquityThree " + str(self.averageEquityThree) + "\n")
 		socket.send("PUT " + "minEquityTwo "       + str(self.minEquityTwo) + "\n")
@@ -488,9 +566,18 @@ class Statistician:
 		for opponent_name in [self.opp1_name, self.opp2_name]:
 			self.pfrFoldPercent[opponent_name] = float(self.foldCountpFr[opponent_name]) / self.numHandsPlayed[opponent_name]
 
-	def getFoldPercent(self):
-		for opponent_name in [self.opp1_name, self.opp2_name]:
-			self.foldPercentage[opponent_name] = float(self.foldCount[opponent_name]) / self.numHandsPlayed[opponent_name]
+	def getFoldPercent(self, name):
+		if self.numHandsPlayed[name] == 0:
+			return self.foldPercentage[name]
+		self.updateFoldBeta(name)
+		return calcEWMA (self.foldBeta[name], float(self.foldCount[name]) / self.postFlopCount[name], self.foldPercentage[name])
+
+	def getPostFlopWinPct(self, name):
+		# TODO: assert here that win count < count
+		if self.postFlopCount[name] == 0:
+			return self.postFlopWinPct[name]
+		self.updatePostFlopWinBeta(name)
+		return calcEWMA (self.postFlopWinBeta[name], float(self.postFlopWinCount[name]) / self.postFlopCount[name], self.postFlopWinPct[name])
 
 	def getAggressionPercent(self):
 		for opponent_name in [self.opp1_name, self.opp2_name]:
@@ -499,6 +586,7 @@ class Statistician:
 	def getVPIPPercent(self):
 		for opponent_name in [self.opp1_name, self.opp2_name]:
 			self.vpipPercent[opponent_name] = self.vpipCount[opponent_name] / self.numHandsPlayed[opponent_name]
+
 
 	# def processPreflopStatistics(self, opponent_names, hand_statistics, playerAction):
 	# 	if playerAction.split(":")[0] == RAISE:
