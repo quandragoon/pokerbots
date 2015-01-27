@@ -66,9 +66,11 @@ TWO_IN_BITCH_FACTOR_TABLE   = {0 : 0.99, 3 : 1, 4 : 1.2, 5 : 1.3}
 THREE_IN_BITCH_FACTOR_TABLE = {0 : 0.99, 3 : 1, 4 : 1.1, 5 : 1.25}
 
 # Hand position table
-POSITION_TWO = {1: BUTTON, 1: SB, 2:BB , 3: OUT}
+POSITION_TWO   = {1: SB, 2:BB , 3: OUT}
 POSITION_THREE = {1: BUTTON, 2: SB, 3: BB}
 
+
+TOLERANCE_FOR_LA = 0.2
 
 
 FIRST_PRIZE  = 180
@@ -127,6 +129,8 @@ def calc_icm (a, b, c):
 class Opponent:
     def __init__ (self, name):
         self.seat        = 0 # 0, 1, 2
+        self.handPosition = None
+        self.playerType  = NEUTRAL
         self.name        = name
         self.stack_size  = 200
         self.status      = ACTIVE
@@ -179,118 +183,121 @@ class Player:
         self.handPosition           = None
         self.opp1_skill             = 0.5
         self.opp2_skill             = 0.5
+        self.isPreflop              = True
+        self.bigBlind               = 2
+        self.lastRaiser             = None
 
         # boss-ass hands
         self.boss_class1            = []
         self.boss_class2            = []
 
-        # POCKET ROCKETS
-        for card1 in ACES:
-            for card2 in ACES:
-                if card1 != card2:
-                    self.boss_class1.append(card1+card2)
+        # # POCKET ROCKETS
+        # for card1 in ACES:
+        #     for card2 in ACES:
+        #         if card1 != card2:
+        #             self.boss_class1.append(card1+card2)
 
-        # POCKET KINGS
-        for card1 in KINGS:
-            for card2 in KINGS:
-                if card1 != card2:
-                    self.boss_class1.append(card1+card2)
+        # # POCKET KINGS
+        # for card1 in KINGS:
+        #     for card2 in KINGS:
+        #         if card1 != card2:
+        #             self.boss_class1.append(card1+card2)
         
-        # POCKET QUEENS
-        for card1 in QUEENS:
-            for card2 in QUEENS:
-                if card1 != card2:
-                    self.boss_class1.append(card1+card2)
+        # # POCKET QUEENS
+        # for card1 in QUEENS:
+        #     for card2 in QUEENS:
+        #         if card1 != card2:
+        #             self.boss_class1.append(card1+card2)
 
-        # ANNA KOURNIKOVA SUITED
-        for card1 in ACES:
-            for card2 in KINGS:
-                if card1[-1] == card2[-1]:
-                    self.boss_class1.append(card1+card2)
-                    self.boss_class1.append(card2+card1)
+        # # ANNA KOURNIKOVA SUITED
+        # for card1 in ACES:
+        #     for card2 in KINGS:
+        #         if card1[-1] == card2[-1]:
+        #             self.boss_class1.append(card1+card2)
+        #             self.boss_class1.append(card2+card1)
 
-        # ACE QUEEN SUITED
-        for card1 in ACES:
-            for card2 in QUEENS:
-                if card1[-1] == card2[-1]:
-                    self.boss_class1.append(card1+card2)
-                    self.boss_class1.append(card2+card1)
+        # # ACE QUEEN SUITED
+        # for card1 in ACES:
+        #     for card2 in QUEENS:
+        #         if card1[-1] == card2[-1]:
+        #             self.boss_class1.append(card1+card2)
+        #             self.boss_class1.append(card2+card1)
 
-        # ROYAL COUPLE SUITED
-        for card1 in KING:
-            for card2 in QUEENS:
-                if card1[-1] == card2[-1]:
-                    self.boss_class1.append(card1+card2)
-                    self.boss_class1.append(card2+card1)
+        # # ROYAL COUPLE SUITED
+        # for card1 in KING:
+        #     for card2 in QUEENS:
+        #         if card1[-1] == card2[-1]:
+        #             self.boss_class1.append(card1+card2)
+        #             self.boss_class1.append(card2+card1)
 
-        # ANNA KOURNIKOVA NOT-SUITED
-        for card1 in ACES:
-            for card2 in KINGS:
-                if card1[-1] != card2[-1]:
-                    self.boss_class2.append(card1+card2)
-                    self.boss_class2.append(card2+card1)
+        # # ANNA KOURNIKOVA NOT-SUITED
+        # for card1 in ACES:
+        #     for card2 in KINGS:
+        #         if card1[-1] != card2[-1]:
+        #             self.boss_class2.append(card1+card2)
+        #             self.boss_class2.append(card2+card1)
 
-        # ACE QUEEN NOT-SUITED
-        for card1 in ACES:
-            for card2 in QUEENS:
-                if card1[-1] != card2[-1]:
-                    self.boss_class2.append(card1+card2)
-                    self.boss_class2.append(card2+card1)
+        # # ACE QUEEN NOT-SUITED
+        # for card1 in ACES:
+        #     for card2 in QUEENS:
+        #         if card1[-1] != card2[-1]:
+        #             self.boss_class2.append(card1+card2)
+        #             self.boss_class2.append(card2+card1)
 
-        # ACE JACK
-        for card1 in ACES:
-            for card2 in JACKS:
-                self.boss_class2.append(card1+card2)
-                self.boss_class2.append(card2+card1)
+        # # ACE JACK
+        # for card1 in ACES:
+        #     for card2 in JACKS:
+        #         self.boss_class2.append(card1+card2)
+        #         self.boss_class2.append(card2+card1)
 
-        # ACE TEN
-        for card1 in ACES:
-            for card2 in TEN:
-                self.boss_class2.append(card1+card2)
-                self.boss_class2.append(card2+card1)
+        # # ACE TEN
+        # for card1 in ACES:
+        #     for card2 in TEN:
+        #         self.boss_class2.append(card1+card2)
+        #         self.boss_class2.append(card2+card1)
 
-        # KING QUEEN NOT-SUITED
-        for card1 in KINGS:
-            for card2 in QUEENS:
-                if card1[-1] != card2[-1]:
-                    self.boss_class2.append(card1+card2)
-                    self.boss_class2.append(card2+card1)
+        # # KING QUEEN NOT-SUITED
+        # for card1 in KINGS:
+        #     for card2 in QUEENS:
+        #         if card1[-1] != card2[-1]:
+        #             self.boss_class2.append(card1+card2)
+        #             self.boss_class2.append(card2+card1)
 
-        # KING JACK
-        for card1 in KINGS:
-            for card2 in JACKS:
-                self.boss_class2.append(card1+card2)
-                self.boss_class2.append(card2+card1)
+        # # KING JACK
+        # for card1 in KINGS:
+        #     for card2 in JACKS:
+        #         self.boss_class2.append(card1+card2)
+        #         self.boss_class2.append(card2+card1)
 
-        # KING TEN
-        for card1 in KINGS:
-            for card2 in TENS:
-                self.boss_class2.append(card1+card2)
-                self.boss_class2.append(card2+card1)
+        # # KING TEN
+        # for card1 in KINGS:
+        #     for card2 in TENS:
+        #         self.boss_class2.append(card1+card2)
+        #         self.boss_class2.append(card2+card1)
 
-        # QUEEN JACK
-        for card1 in QUEENS:
-            for card2 in JACKS:
-                self.boss_class2.append(card1+card2)
-                self.boss_class2.append(card2+card1)
+        # # QUEEN JACK
+        # for card1 in QUEENS:
+        #     for card2 in JACKS:
+        #         self.boss_class2.append(card1+card2)
+        #         self.boss_class2.append(card2+card1)
 
-        # QUEEN TEN
-        for card1 in QUEENS:
-            for card2 in TENS:
-                self.boss_class2.append(card1+card2)
-                self.boss_class2.append(card2+card1)
+        # # QUEEN TEN
+        # for card1 in QUEENS:
+        #     for card2 in TENS:
+        #         self.boss_class2.append(card1+card2)
+        #         self.boss_class2.append(card2+card1)
 
-        # POCKET JACKS
-        for card1 in JACKS:
-            for card2 in JACKS:
-                if card1 != card2:
-                    self.boss_class2.append(card1+card2)
+        # # POCKET JACKS
+        # for card1 in JACKS:
+        #     for card2 in JACKS:
+        #         if card1 != card2:
+        #             self.boss_class2.append(card1+card2)
 
-        # POCKET TENS
-        for card1 in TENS:
-            for card2 in TENS:
-                if card1 != card2:
-                    self.boss_class2.append(card1+card2)
+        # # POCKET TENS
+        # for card1 in TENS:
+        #     for card2 in TENS:
+        #         if card1 != card2:
+        #             self.boss_class2.append(card1+card2)
 
 
 
@@ -336,6 +343,8 @@ class Player:
         self.opponent_2_name = received_packet['opponent_2_name']
 
         self.my_name = received_packet['player_name']
+
+        self.bigBlind = received_packet['big_blind']
 
 
         self.opp_dict[self.opponent_1_name] = Opponent(self.opponent_1_name)
@@ -408,7 +417,12 @@ class Player:
         for i in range(len(names)):
             name = names[i]
             if name != self.my_name:
+                self.opp_dict[name].playerType = self.STATS.getPlayerType(name)
                 self.opp_dict[name].seat = i 
+                if self.num_active_players == 2:
+                    self.opp_dict[name].handPosition = POSITION_TWO[i+1]
+                else:
+                    self.opp_dict[name].handPosition = POSITION_THREE[i+1]
                 self.opp_dict[name].stack_size = self.list_of_stacksizes[i]
                 self.opp_dict[name].original_stacksize = self.list_of_stacksizes[i]
                 # update status
@@ -636,8 +650,7 @@ class Player:
                 if self.opp_dict[name].status == ACTIVE:
                     guy_active = name
                 # DEBUG
-                playerType = self.STATS.getPlayerType(name)
-                print "PLAYER_TYPE : " + str(playerType)
+                print "PLAYER_TYPE : " + self.opp_dict[name].playerType
             minEquity = self.STATS.minEquityTwo[guy_active][self.num_boardcards]
             avgEquity = self.STATS.averageEquityTwo[guy_active][self.num_boardcards]
         else:
@@ -711,49 +724,124 @@ class Player:
         print 'EQUITY: ' + str(equity)
 
         own_a_lot_of_chips = self.my_stacksize > LOTS_OF_CHIPS
+        winning_factor = ((equity - self.fold_thres) / (1 - self.fold_thres))**POWER
 
         # TODO: Raise a little if they checked last turn
 
-        if equity < self.fold_thres and ((own_a_lot_of_chips != True) or (self.num_boardcards != 0)):
-            # TODO: Implement bluffing / call here
-            if CHECK in avail_actions:
-                # bet a little bit if possible to exploit bots who fold to small raises: (but dont do this all the time)
-                # if BET in avail_actions and self.my_stacksize > BET_SMALL_LIKELIHOOD[self.num_boardcards]:
-                if False:
-                    random_nig = random.random()
-                    # foldPerc = 0.0
-                    # for name in self.opp_dict:
-                    #     if self.opp_dict[name].status == ACTIVE:
-                    #         foldPerc += self.STATS.foldPercentage[name]
-                    # if not self.one_folded:
-                    #     foldPerc = foldPerc / 2
-                    if random_nig < self.opp_fold_thres:
-                        print "MINBET: " + str(self.minBet)
-                        return BET + ":" + str(self.minBet)
-                return CHECK
-            return FOLD
+        # if equity < self.fold_thres and ((own_a_lot_of_chips != True) or (self.num_boardcards != 0)):
+        #     # TODO: Implement bluffing / call here
+        #     if CHECK in avail_actions:
+        #         # bet a little bit if possible to exploit bots who fold to small raises: (but dont do this all the time)
+        #         # if BET in avail_actions and self.my_stacksize > BET_SMALL_LIKELIHOOD[self.num_boardcards]:
+        #         if False:
+        #             random_nig = random.random()
+        #             # foldPerc = 0.0
+        #             # for name in self.opp_dict:
+        #             #     if self.opp_dict[name].status == ACTIVE:
+        #             #         foldPerc += self.STATS.foldPercentage[name]
+        #             # if not self.one_folded:
+        #             #     foldPerc = foldPerc / 2
+        #             if random_nig < self.opp_fold_thres:
+        #                 print "MINBET: " + str(self.minBet)
+        #                 return BET + ":" + str(self.minBet)
+        #         return CHECK
+        #     return FOLD
 
-        # elif equity > self.raise_thres and (self.is_new_round or do_reraise): 
-        elif equity > self.raise_thres:
-            "$$$ IN BET"
-            winning_factor = ((equity - self.fold_thres) / (1 - self.fold_thres))**POWER
-            if BET in avail_actions:
-                amount = self.bet_handler(winning_factor)
-                return BET + ":" + str(amount)
-            elif RAISE in avail_actions and do_reraise:
-                # if they raise a little, either counter raise or call
-                if self.should_call(equity):
-                    amount = self.raise_handler(winning_factor)
-                    return RAISE + ":" + str(amount)
-                else:
-                    return FOLD
-        
-        if CALL in avail_actions: 
+
+        # Subroutines we use to make our lives easier:
+        #####################################################################################################
+        def do_call ():
             if self.should_call(equity):
                 self.highestRaiseAmtThisRnd = self.call_amount
                 return CALL + ":" + str(self.call_amount)
             else:
                 return FOLD
+
+        def do_raise_preflop ():
+            if self.my_hand in boss_class1:
+                # raise a lot
+                return RAISE + ":" + str(self.maxRaise)
+            elif self.my_hand in boss_class2 and (self.opp_dict[self.opponent_1_name] != TYPE_TA and self.opp_dict[self.opponent_2_name] != TYPE_TA)
+                and (self.opp_dict[self.opponent_1_name] != TYPE_STA and self.opp_dict[self.opponent_2_name] != TYPE_STA):
+                # raise a lot
+                return RAISE + ":" + str(self.maxRaise)
+            # bet a little in general
+            return RAISE + ":" + str(self.minRaise)
+
+        def do_call_preflop ():
+            raiserType = self.opp_dict[self.lastRaiser]
+            if raiserType == TYPE_STA or raiserType == TYPE_TA:
+                if self.my_hand in boss_class1:
+                    return do_call()
+                else:
+                    # do not engage
+                    return FOLD
+            elif raiserType != TYPE_LA:
+                if self.my_hand in boss_class1 or self.my_hand in boss_class2
+                    return do_call()
+                else:
+                    return FOLD
+            else:
+                return do_call()
+        #####################################################################################################
+
+
+
+        if equity < self.fold_thres:
+            if self.isPreflop:
+                if self.handPosition == BUTTON:
+                    if self.opp_dict[self.opponent_1_name] == TYPE_LA or self.opp_dict[self.opponent_2_name] == TYPE_LA:
+                        if (self.fold_thres - equity) < TOLERANCE_FOR_LA:
+                            if CALL in avail_actions:
+                                if self.call_amount == self.bigBlind:
+                                    return RAISE + ":" + str(self.minRaise)
+            if CHECK in avail_actions:
+                return CHECK
+            return FOLD
+
+
+
+        # elif equity > self.raise_thres and (self.is_new_round or do_reraise): 
+        elif equity > self.raise_thres:
+            "$$$ IN BET"
+            if self.isPreflop: # fun time!
+                if self.handPosition == BUTTON:
+                    if self.opp_dict[self.opponent_1_name] == TYPE_LA or self.opp_dict[self.opponent_2_name] == TYPE_LA:
+                        # niggas will handle the raising for us
+                        return do_call()
+                    if CALL in avail_actions:
+                        return do_raise_preflop()
+
+                elif self.handPosition == BB:
+                    return do_call_preflop()
+
+                    elif RAISE in avail_actions and self.potsize < 7:
+                        return do_raise_preflop()
+                    return CHECK
+
+                elif self.handPosition == SB:
+                    if CALL in avail_actions: 
+                        if self.call_amount == self.bigBlind:
+                            return do_raise_preflop()
+                        else: # someone raised
+                            return do_call_preflop()
+
+            else: 
+                if BET in avail_actions:
+                    amount = self.bet_handler(winning_factor)
+                    return BET + ":" + str(amount)
+                elif RAISE in avail_actions and do_reraise:
+                    # if they raise a little, either counter raise or call
+                    if self.should_call(equity):
+                        amount = self.raise_handler(winning_factor)
+                        return RAISE + ":" + str(amount)
+                    else:
+                        return FOLD
+
+
+        if CALL in avail_actions:
+            return do_call ()
+
 
         return CHECK
 
@@ -779,6 +867,7 @@ class Player:
         self.STATS.recordActions(last_actions)
         #################################################################
 
+        self.lastRaiser = None
         for act in last_actions:
             sp = act.split(":")
             name = sp[-1]
@@ -787,6 +876,8 @@ class Player:
                 if sp[0] == FOLD:
                     self.opp_dict[name].status = FOLDED
                     self.one_folded = True
+                if sp[0] == BET or sp[0] == RAISE:
+                    self.lastRaiser = name
                 
 
         for name in self.opp_dict:
@@ -808,7 +899,8 @@ class Player:
         else: 
             self.is_new_round = True
             self.highestRaiseAmtThisRnd = 0
-        self.num_boardcards = received_packet['num_boardcards'] 
+        self.num_boardcards = received_packet['num_boardcards']
+        self.isPreflop = (self.num_boardcards == 0) 
 
         for action in received_packet['legal_actions']:
             split_action = action.split(":")
