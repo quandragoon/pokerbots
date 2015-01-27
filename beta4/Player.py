@@ -53,10 +53,6 @@ TWO_RAISE_THRES_TABLE   = {0 : 0.6,  3 : 0.7,  4 : 0.75,  5 : 0.8}
 BET_SMALL_LIKELIHOOD = {}
 
 
-# randomness threshold
-THREE_RERAISE_THRES = 0.8
-TWO_RERAISE_THRES   = 0.6
-
 POWER = 4
 
 # KEYVALUE Packet Parsing
@@ -172,7 +168,10 @@ class Player:
         self.STATS                  = None
         self.monte_carlo_iter       = MONTE_CARLO_ITER
         self.one_folded             = False
+        self.guy_active             = ""
         self.handPosition           = None
+        self.opp1_skill             = 0.5
+        self.opp2_skill             = 0.5
 
         # precomputed equity tables for pre flop
         self.equity_table_2         = {}
@@ -300,6 +299,11 @@ class Player:
                 else:
                     self.opp_dict[name].status = ACTIVE
 
+        winPercA = self.STATS.getPostFlopWinPct(self.opponent_1_name)
+        winPercB = self.STATS.getPostFlopWinPct(self.opponent_2_name)
+
+        self.opp1_skill = winPercA / (winPercA + winPercB)
+        self.opp2_skill = 1 - self.opp1_skill
 
 
     def bet_handler(self, winning_factor):
@@ -376,9 +380,7 @@ class Player:
 
         if self.num_active_players == 2: #heads-up
             print "$$$ HEADS UP"
-            for name in self.opp_dict:
-                if self.opp_dict[name].status == ACTIVE:
-                    guy_active = name
+            guy_active = self.guy_active
 
             other_guy_stacksize = self.opp_dict[guy_active].original_stacksize
 
@@ -556,7 +558,7 @@ class Player:
         if self.num_active_players == 2 or self.one_folded == True:
             self.fold_thres = TWO_FOLD_THRES_TABLE[self.num_boardcards]
             self.raise_thres = TWO_RAISE_THRES_TABLE[self.num_boardcards]
-            self.reraise_thres = TWO_RERAISE_THRES
+            self.reraise_thres = self.STATS.getFoldPercent(self.guy_active)
             if self.num_boardcards == 0:
                 equity = self.equity_table_2[self.my_hand]
             else:
@@ -566,7 +568,7 @@ class Player:
         else:
             self.fold_thres = THREE_FOLD_THRES_TABLE[self.num_boardcards]
             self.raise_thres = THREE_RAISE_THRES_TABLE[self.num_boardcards]
-            self.reraise_thres = THREE_RERAISE_THRES
+            self.reraise_thres = self.opp1_skill * self.STATS.getFoldPercent(self.opponent_1_name) + self.opp2_skill * self.STATS.getFoldPercent(self.opponent_2_name) 
             if self.num_boardcards == 0:
                 equity = self.equity_table_3[self.my_hand]
             else:
@@ -576,7 +578,7 @@ class Player:
 
 
 
-        do_reraise = random.random() > self.reraise_thres
+        do_reraise = random.random() < self.reraise_thres
 
         print 'EQUITY: ' + str(equity)
 
@@ -610,7 +612,7 @@ class Player:
             if BET in avail_actions:
                 amount = self.bet_handler(winning_factor)
                 return BET + ":" + str(amount)
-            elif RAISE in avail_actions:
+            elif RAISE in avail_actions and do_reraise:
                 # if they raise a little, either counter raise or call
                 if self.should_call(equity):
                     amount = self.raise_handler(winning_factor)
@@ -644,9 +646,11 @@ class Player:
         self.num_active_players = received_packet['num_active_players']
 
         last_actions = received_packet['last_action']
+
         #################################################################
         self.STATS.recordActions(last_actions)
         #################################################################
+
         for act in last_actions:
             sp = act.split(":")
             name = sp[-1]
@@ -655,9 +659,12 @@ class Player:
                 if sp[0] == FOLD:
                     self.opp_dict[name].status = FOLDED
                     self.one_folded = True
+                
 
         for name in self.opp_dict:
             self.opp_dict[name].stack_size = self.list_of_stacksizes[self.opp_dict[name].seat]
+            if self.opp_dict[name].status == ACTIVE:
+                    self.guy_active = name
 
         # print '###################################'
         # for shit in self.opp_dict:    
