@@ -74,6 +74,9 @@ for card1 in EIGHTS:
         if card1 != card2:
             boss_class2.append(card1+card2)
 
+print boss_class1
+print boss_class2
+
 # # ROYAL COUPLE SUITED
 # for card1 in KINGS:
 #     for card2 in QUEENS:

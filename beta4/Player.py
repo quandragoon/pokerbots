@@ -4,7 +4,6 @@ import sys
 import pbots_calc
 import random
 import Statistician
-import boss_hands
 
 from util import packet_parse
 """
@@ -169,6 +168,34 @@ class Player:
         self.handPosition           = None
         self.opp1_skill             = 0.5
         self.opp2_skill             = 0.5
+        self.boss_class1            = ['AsAh', 'AsAd', 'AsAc', 'AhAs', 
+                                       'AhAd', 'AhAc', 'AdAs', 'AdAh', 
+                                       'AdAc', 'AcAs', 'AcAh', 'AcAd', 
+                                       'KsKh', 'KsKd', 'KsKc', 'KhKs', 
+                                       'KhKd', 'KhKc', 'KdKs', 'KdKh', 
+                                       'KdKc', 'KcKs', 'KcKh', 'KcKd', 
+                                       'QsQh', 'QsQd', 'QsQc', 'QhQs', 
+                                       'QhQd', 'QhQc', 'QdQs', 'QdQh', 
+                                       'QdQc', 'QcQs', 'QcQh', 'QcQd', 
+                                       'JsJh', 'JsJd', 'JsJc', 'JhJs', 
+                                       'JhJd', 'JhJc', 'JdJs', 'JdJh', 
+                                       'JdJc', 'JcJs', 'JcJh', 'JcJd', 
+                                       'TsTh', 'TsTd', 'TsTc', 'ThTs', 
+                                       'ThTd', 'ThTc', 'TdTs', 'TdTh', 
+                                       'TdTc', 'TcTs', 'TcTh', 'TcTd', 
+                                       'AsKs', 'KsAs', 'AhKh', 'KhAh', 
+                                       'AdKd', 'KdAd', 'AcKc', 'KcAc']
+
+        self.boss_class2            = ['AsQs', 'QsAs', 'AhQh', 'QhAh', 
+                                       'AdQd', 'QdAd', 'AcQc', 'QcAc', 
+                                       'AsJs', 'JsAs', 'AhJh', 'JhAh', 
+                                       'AdJd', 'JdAd', 'AcJc', 'JcAc', 
+                                       '9s9h', '9s9d', '9s9c', '9h9s', 
+                                       '9h9d', '9h9c', '9d9s', '9d9h', 
+                                       '9d9c', '9c9s', '9c9h', '9c9d', 
+                                       '8s8h', '8s8d', '8s8c', '8h8s', 
+                                       '8h8d', '8h8c', '8d8s', '8d8h', 
+                                       '8d8c', '8c8s', '8c8h', '8c8d']
 
 
         # precomputed equity tables for pre flop
