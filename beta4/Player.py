@@ -50,7 +50,7 @@ THREE_RAISE_THRES_TABLE = {0 : 0.36, 3 : 0.5,  4 : 0.7, 5 : 0.8}
 TWO_FOLD_THRES_TABLE    = {0 : 0.4,  3 : 0.25, 4 : 0.2,  5 : 0.2}
 TWO_RAISE_THRES_TABLE   = {0 : 0.6,  3 : 0.7,  4 : 0.75,  5 : 0.8}
 
-BET_SMALL_LIKELIHOOD = {}
+BET_SMALL_LIKELIHOOD = {0 : 150, 3 : 130, 4 : 100, 5 : 80}
 
 
 POWER = 4
@@ -154,7 +154,7 @@ class Player:
         self.my_original_stacksize  = 0
         self.alpha                  = 0.5 # how agressive we are
         self.fold_thres             = 0
-        self.reraise_thres          = 0
+        self.opp_fold_thres         = 0
         self.raise_thres            = 0
         self.highestRaiseAmtThisRnd = 0
         self.call_amount            = 0
@@ -547,18 +547,18 @@ class Player:
         # if not self.one_out:
         #     self.fold_thres = THREE_FOLD_THRES_TABLE[self.num_boardcards]
         #     self.raise_thres = THREE_RAISE_THRES_TABLE[self.num_boardcards]
-        #     self.reraise_thres = THREE_RERAISE_THRES
+        #     self.opp_fold_thres = THREE_opp_fold_thres
         # else:
         #     self.fold_thres = TWO_FOLD_THRES_TABLE[self.num_boardcards]
         #     self.raise_thres = TWO_RAISE_THRES_TABLE[self.num_boardcards]
-        #     self.reraise_thres = TWO_RERAISE_THRES
+        #     self.opp_fold_thres = TWO_opp_fold_thres
 
         # see if we could use precomputed equity
 
         if self.num_active_players == 2 or self.one_folded == True:
             self.fold_thres = TWO_FOLD_THRES_TABLE[self.num_boardcards]
             self.raise_thres = TWO_RAISE_THRES_TABLE[self.num_boardcards]
-            self.reraise_thres = self.STATS.getFoldPercent(self.guy_active)
+            self.opp_fold_thres = self.STATS.getFoldPercent(self.guy_active)
             if self.num_boardcards == 0:
                 equity = self.equity_table_2[self.my_hand]
             else:
@@ -568,7 +568,7 @@ class Player:
         else:
             self.fold_thres = THREE_FOLD_THRES_TABLE[self.num_boardcards]
             self.raise_thres = THREE_RAISE_THRES_TABLE[self.num_boardcards]
-            self.reraise_thres = self.opp1_skill * self.STATS.getFoldPercent(self.opponent_1_name) + self.opp2_skill * self.STATS.getFoldPercent(self.opponent_2_name) 
+            self.opp_fold_thres = self.opp1_skill * self.STATS.getFoldPercent(self.opponent_1_name) + self.opp2_skill * self.STATS.getFoldPercent(self.opponent_2_name) 
             if self.num_boardcards == 0:
                 equity = self.equity_table_3[self.my_hand]
             else:
@@ -578,7 +578,7 @@ class Player:
 
 
 
-        do_reraise = random.random() < self.reraise_thres
+        do_reraise = random.random() < self.opp_fold_thres
 
         print 'EQUITY: ' + str(equity)
 
@@ -590,21 +590,20 @@ class Player:
             # TODO: Implement bluffing / call here
             if CHECK in avail_actions:
                 # bet a little bit if possible to exploit bots who fold to small raises: (but dont do this all the time)
-                if BET in avail_actions and self.my_stacksize > BET_SMALL_LIKELIHOOD:
+                if BET in avail_actions and self.my_stacksize > BET_SMALL_LIKELIHOOD[self.num_boardcards]:
                     random_nig = random.random()
-                    fsoldPerc = 0.0
-                    for name in self.opp_dict:
-                        if self.opp_dict[name].status == ACTIVE:
-                            sumFoldPerc += self.STATS.foldPercentage[name]
-                    if not self.one_folded:
-                        sumFoldPerc = foldPerc / 2
-                    if random_nig < foldPerc:
+                    # foldPerc = 0.0
+                    # for name in self.opp_dict:
+                    #     if self.opp_dict[name].status == ACTIVE:
+                    #         foldPerc += self.STATS.foldPercentage[name]
+                    # if not self.one_folded:
+                    #     foldPerc = foldPerc / 2
+                    if random_nig < self.opp_fold_thres:
                         print "MINBET: " + str(self.minBet)
                         return BET + ":" + str(self.minBet)
                 return CHECK
             return FOLD
 
-        # TODO: STOP RERAISING
         # elif equity > self.raise_thres and (self.is_new_round or do_reraise): 
         elif equity > self.raise_thres:
             "$$$ IN BET"
@@ -706,14 +705,14 @@ class Player:
 
     def handover_handler(self, received_packet):
         ###############################################################################################
-        self.STATS.updateOpponentStatistics(received_packet, self.hand_id, self.num_active_players, self.monte_carlo_iter / 5)
+        self.STATS.updateOpponentStatistics(received_packet, self.num_active_players, self.monte_carlo_iter / 5)
         ###############################################################################################
 
     def requestkeyvalue_handler(self, received_packet):
         # At the end, the engine will allow your bot save key/value pairs.
         # Send FINISH to indicate you're done.
         ###############################################################################################
-        self.STATS.compileMatchStatistics(self.hand_id, s)
+        self.STATS.compileMatchStatistics(self.history_storage, s)
         ###############################################################################################
         s.send("FINISH\n")
 

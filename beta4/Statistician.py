@@ -213,7 +213,7 @@ class Statistician:
 
 	# Update opponent statistics after each hand
 	# playerAction is the most recent action that our player took
-	def updateOpponentStatistics(self, received_packet, hand_id, num_active_players, monte_carlo_iter):		
+	def updateOpponentStatistics(self, received_packet, num_active_players, monte_carlo_iter):		
 
 
 		# if received_packet['packet_name'] == "GETACTION":
@@ -499,7 +499,7 @@ class Statistician:
 			# self.numActivePlayersRiver = 0
 
 
-	def compileMatchStatistics(self, hand_id, socket):
+	def compileMatchStatistics(self, history_storage, socket):
 		# for opponent_name in [self.opp1_name, self.opp2_name]:
 		# 	if self.numHandsPlayed[opponent_name] == 0:
 		# 		self.numHandsPlayed[opponent_name] = hand_id
@@ -522,11 +522,40 @@ class Statistician:
 						self.opp2_name : {FOLD_PERCENT : self.foldPercentage[self.opp2_name], 
 											AGGR_PERCENT : self.aggressionPercent[self.opp2_name], 
 											PFWIN_PERCENT : self.postFlopWinPct[self.opp2_name]}}
-		socket.send("PUT " + "averageEquityTwo "   + str(self.averageEquityTwo) + "\n")
-		socket.send("PUT " + "averageEquityThree " + str(self.averageEquityThree) + "\n")
-		socket.send("PUT " + "minEquityTwo "       + str(self.minEquityTwo) + "\n")
-		socket.send("PUT " + "minEquityThree "     + str(self.minEquityThree) + "\n")
-		socket.send("PUT " + "generalStats "       + str(generalStats) + "\n")
+
+
+		# Writing back to history storage
+		if "generalStats" in history_storage:
+			history_storage["generalStats"] = dict(history_storage["generalStats"].items() + generalStats.items())
+		else:
+			history_storage["generalStats"] = generalStats
+
+		if "averageEquityTwo" in history_storage:
+			history_storage["averageEquityTwo"] = dict(history_storage["averageEquityTwo"].items() + self.averageEquityTwo.items())
+		else:
+			history_storage["averageEquityTwo"] = self.averageEquityTwo
+
+		if "averageEquityThree" in history_storage:
+			history_storage["averageEquityThree"] = dict(history_storage["averageEquityThree"].items() + self.averageEquityThree.items())
+		else:
+			history_storage["averageEquityThree"] = self.averageEquityThree
+
+		if "minEquityTwo" in history_storage:
+			history_storage["minEquityTwo"] = dict(history_storage["minEquityTwo"].items() + self.minEquityTwo.items())
+		else:
+			history_storage["minEquityTwo"] = self.minEquityTwo
+
+		if "minEquityThree" in history_storage:
+			history_storage["minEquityThree"] = dict(history_storage["minEquityThree"].items() + self.minEquityThree.items())
+		else:
+			history_storage["minEquityThree"] = self.minEquityThree
+
+
+		socket.send("PUT " + "averageEquityTwo "   + str(history_storage["averageEquityTwo"]) + "\n")
+		socket.send("PUT " + "averageEquityThree " + str(history_storage["averageEquityThree"]) + "\n")
+		socket.send("PUT " + "minEquityTwo "       + str(history_storage["minEquityTwo"]) + "\n")
+		socket.send("PUT " + "minEquityThree "     + str(history_storage["minEquityThree"]) + "\n")
+		socket.send("PUT " + "generalStats "       + str(history_storage["generalStats"]) + "\n")
 		# print "######## DEBUGGING PREFLOP STATISTICS ########"
 		# print "Player Name: ", self.myName
 		# print "Names of opponent: ", self.opp1_name, self.opp2_name
@@ -573,7 +602,6 @@ class Statistician:
 		return calcEWMA (self.foldBeta[name], float(self.foldCount[name]) / self.postFlopCount[name], self.foldPercentage[name])
 
 	def getPostFlopWinPct(self, name):
-		# TODO: assert here that win count < count
 		if self.postFlopCount[name] == 0:
 			return self.postFlopWinPct[name]
 		self.updatePostFlopWinBeta(name)
