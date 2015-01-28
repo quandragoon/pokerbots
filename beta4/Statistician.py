@@ -57,8 +57,8 @@ def calcEWMA (alpha, new_input, old_avg):
 
 def classify_pre_flop_player (vpip, pfr, vpipPerc):
 	ratio = float(vpip) / pfr
-	print "RATIO : " + str(ratio)
-	print "VPIP P: " + str(vpipPerc)
+	# print "RATIO : " + str(ratio)
+	# print "VPIP P: " + str(vpipPerc)
 	if vpipPerc > LOOSE_THRESH: # If loose
 		if ratio < 1.4:
 			# Loose Aggressive
