@@ -47,10 +47,10 @@ LOTS_OF_CHIPS    = 400
 SUFFICIENT_CHIPS = 100
 
 # equity threshold
-THREE_FOLD_THRES_TABLE  = {0 : 0.38, 3 : 0.2,  4 : 0.2,  5 : 0.2}
-THREE_RAISE_THRES_TABLE = {0 : 0.45, 3 : 0.7,  4 : 0.7,  5 : 0.8}
-TWO_FOLD_THRES_TABLE    = {0 : 0.55, 3 : 0.35, 4 : 0.3,  5 : 0.3}
-TWO_RAISE_THRES_TABLE   = {0 : 0.65, 3 : 0.75,  4 : 0.75, 5 : 0.8}
+THREE_FOLD_THRES_TABLE  = {0 : 0.38, 3 : 0.25, 4 : 0.25, 5 : 0.4}
+THREE_RAISE_THRES_TABLE = {0 : 0.45, 3 : 0.7,  4 : 0.7,  5 : 0.7}
+TWO_FOLD_THRES_TABLE    = {0 : 0.45, 3 : 0.35, 4 : 0.3,  5 : 0.5}
+TWO_RAISE_THRES_TABLE   = {0 : 0.65, 3 : 0.75,  4 : 0.75, 5 : 0.75}
 
 BET_SMALL_LIKELIHOOD = {0 : 150, 3 : 130, 4 : 100, 5 : 80}
 
@@ -262,7 +262,7 @@ class Player:
 
         self.time_bank       = float(received_packet['timeBank'])
         self.time_low_thres  = 0.3 * self.time_bank
-        self.time_per_hand   = 2 * self.time_bank / received_packet['num_hands']  
+        self.time_per_hand   = 1.5 * self.time_bank / received_packet['num_hands']  
 
 
         # If we have already played the opponent before, 
@@ -569,16 +569,24 @@ class Player:
 
         if should:
             print "$$$ SHOULD"
+            print "INC CALL: " + str(self.inc_call_amount)
+            print "POT SIZE: " + str(self.potsize)
+
             # if relatively smalll:
             if self.inc_call_amount < 0.05 * self.potsize:
                 return True
 
             # aggressive raise
-            if self.inc_call_amount > 5 and self.inc_call_amount > 0.5 * self.potsize:
+            if self.inc_call_amount > 10 and self.inc_call_amount > 0.4 * self.potsize:
                 if self.opp_dict[self.lastRaiser].playerType in [TYPE_TA, TYPE_STA]:
+                    print "FOLDED BECAUSE PLAYER TYPE: " + self.opp_dict[self.lastRaiser].playerType 
                     return False
-                elif equity < 1.15 * self.raise_thres:
+                elif self.opp_dict[self.lastRaiser].playerType != TYPE_LA and equity < 1.15 * self.raise_thres:
+                    print "FOLDED BECAUSE DID NOT MEET THRES: " + str(self.raise_thres * 1.15)
                     return False 
+                elif equity < self.raise_thres:
+                    print "FOLDED BECAUSE DID NOT MEET THRES"
+                    return False
 
             if self.num_boardcards != 0 and equity < avgEquity:
                 print "$$$ BUT NO"
@@ -679,17 +687,19 @@ class Player:
 
         def do_raise_preflop ():
             if self.my_hand in self.boss_class1:
+                if self.lastRaiser in [TYPE_STA]:
+                    return CALL + ":" + str(self.call_amount)
                 # raise a lot
                 return RAISE + ":" + str(self.maxRaise)
             elif self.my_hand in self.boss_class2:
                 if self.num_active_players == 3 and self.one_folded == False:
-                    if (self.opp_dict[self.opponent_1_name].playerType != TYPE_TA and self.opp_dict[self.opponent_2_name].playerType != TYPE_TA) \
-                    and (self.opp_dict[self.opponent_1_name].playerType != TYPE_STA and self.opp_dict[self.opponent_2_name].playerType != TYPE_STA):
+                    if (self.opp_dict[self.opponent_1_name].playerType not in [TYPE_STA, TYPE_TA, TYPE_LP]) and \
+                        (self.opp_dict[self.opponent_2_name].playerType not in [TYPE_STA, TYPE_TA, TYPE_LP]):
                         # raise a lot
                         return RAISE + ":" + str(self.maxRaise)
                     else:
                         return RAISE + ":" + str(self.minRaise)
-                elif self.opp_dict[self.guy_active].playerType not in [TYPE_STA, TYPE_TA]:
+                elif self.opp_dict[self.guy_active].playerType not in [TYPE_STA, TYPE_TA, TYPE_LP]:
                     # raise a lot
                     return RAISE + ":" + str(self.maxRaise)
                 else:
@@ -699,7 +709,7 @@ class Player:
 
         def do_call_preflop ():
             raiserType = self.opp_dict[self.lastRaiser].playerType
-            if raiserType == TYPE_STA or raiserType == TYPE_TA:
+            if raiserType in [TYPE_STA, TYPE_TA, TYPE_LP]:
                 if self.my_hand in self.boss_class1:
                     return do_call()
                 else:
@@ -731,6 +741,10 @@ class Player:
                     return BET + ":" + str(self.minBet)
             if CHECK in avail_actions:
                 return CHECK
+            if CALL in avail_actions:
+                # if relatively smalll:
+                if self.inc_call_amount < 0.05 * self.potsize:
+                    return do_call()
             return FOLD
 
 
@@ -806,7 +820,7 @@ class Player:
         self.potsize            = received_packet['potsize']
         self.num_active_players = received_packet['num_active_players']
         self.boardcards         = received_packet['boardcards']
-        self.foundFaceCard = self.faceCardOnTable(self.boardcards)
+        self.foundFaceCard      = self.faceCardOnTable(self.boardcards)
         print "FACE CARD CHECK", self.foundFaceCard
 
         last_actions = received_packet['last_action']
