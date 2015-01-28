@@ -77,6 +77,7 @@ FIRST_PRIZE  = 180
 SECOND_PRIZE = 60
 THIRD_PRIZE  = 0
 
+FACE_CARDS = ["A", "K", "Q", "J"]
 
 # ICM Helper function
 def calc_icm (a, b, c):
@@ -164,6 +165,8 @@ class Player:
         self.is_new_round           = True
         self.last_action            = None
         self.num_boardcards         = -1
+        self.boardcards             = []
+        self.foundFaceCard          = False
         self.my_seat                = 1
         self.potsize                = 0
         self.opp_dict               = {}
@@ -233,15 +236,12 @@ class Player:
         return int(max(self.minRaise, min(amount, self.maxRaise)))
 
 
-    # def makeAction(self, action, amount, minBet, maxBet, minRaise, maxRaise):
-    #     if action == BET:
-    #         amount = self.makeBet(minBet, maxBet)
-    #         s.send(action + ':' + str(amount) + '\n')
-    #     elif action == RAISE:
-    #         amount = self.makeRaise(minRaise, maxRaise)
-    #         s.send(action + ':' + str(amount) + '\n')
-    #     else:
-    #         s.send(action + '\n')
+    def faceCardOnTable(self, boardcards):
+        if len(boardcards) > 0:
+            for card in boardcards:
+                if card[0] in FACE_CARDS:
+                    self.foundFaceCard = True
+        return self.foundFaceCard
 
 
     def keyval_handler(self, received_packet):
@@ -805,6 +805,9 @@ class Player:
         self.my_stacksize       = self.list_of_stacksizes[self.my_seat - 1]
         self.potsize            = received_packet['potsize']
         self.num_active_players = received_packet['num_active_players']
+        self.boardcards         = received_packet['boardcards']
+        self.foundFaceCard = self.faceCardOnTable(self.boardcards)
+        print "FACE CARD CHECK", self.foundFaceCard
 
         last_actions = received_packet['last_action']
 
@@ -871,6 +874,7 @@ class Player:
 
     def handover_handler(self, received_packet):
         ###############################################################################################
+        self.foundFaceCard = False
         self.STATS.updateOpponentStatistics(received_packet, self.num_active_players, self.monte_carlo_iter / 5)
         ###############################################################################################
 
