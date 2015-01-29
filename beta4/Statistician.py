@@ -2,6 +2,7 @@ import argparse
 import sys
 import socket
 import pbots_calc
+import random
 
 from util import packet_parse
 
@@ -424,7 +425,7 @@ class Statistician:
 
 
 
-	def compileMatchStatistics(self, history_storage, socket):
+	def compileMatchStatistics(self, history_storage, socket, bytes_left):
 		# for opponent_name in [self.opp1_name, self.opp2_name]:
 		# 	if self.numHandsPlayed[opponent_name] == 0:
 		# 		self.numHandsPlayed[opponent_name] = hand_id
@@ -463,6 +464,14 @@ class Statistician:
 				history_storage[opponent_name] = dict(history_storage[opponent_name].items() + generalStats[opponent_name].items())
 			else:
 				history_storage[opponent_name] = generalStats[opponent_name]
+				if len(str(generalStats[opponent_name])) > (bytes_left + 2):
+					rand_value = random.randrange(0, len(history_storage))
+					key_to_delete = history_storage.keys()[rand_value]
+					print "KEY TO DELETE", key_to_delete
+					del history_storage[key_to_delete]
+					history_storage[opponent_name] = generalStats[opponent_name]
+					socket.send("DELETE " + key_to_delete + "\n" )
+			
 			print "END : " + str(history_storage)
 			socket.send("PUT " +    opponent_name + " " + str(history_storage[opponent_name]) + "\n")
 

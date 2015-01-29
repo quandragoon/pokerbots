@@ -957,7 +957,7 @@ class Player:
         # At the end, the engine will allow your bot save key/value pairs.
         # Send FINISH to indicate you're done.
         ###############################################################################################
-        self.STATS.compileMatchStatistics(self.history_storage, s)
+        self.STATS.compileMatchStatistics(self.history_storage, s, int(received_packet['bytesLeft']))
         ###############################################################################################
         s.send("FINISH\n")
 
