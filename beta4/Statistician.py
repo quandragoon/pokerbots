@@ -182,7 +182,7 @@ class Statistician:
 		self.minEquityThree  = {self.opp1_name : {0 : 0.35, 3 : 0.3, 4 : 0.4, 5 : 0.4}, self.opp2_name : {0 : 0.35, 3 : 0.3, 4 : 0.4, 5 : 0.4}}
 
 
-	def loadDataFromHistoryStorage(self, history_storage):
+	def loadDataFromHistoryStorage(self, history_storage, opponent_name):
 	# 	# min equity data
 	# 	if "minEquityTwo" in history_storage and "minEquityThree" in history_storage:
 	# 		if self.opp1_name in history_storage["minEquityTwo"]:
@@ -205,28 +205,28 @@ class Statistician:
 	# 			self.averageEquityThree[self.opp2_name] = history_storage["averageEquityThree"][self.opp2_name]
 
 		# general stats
-		if "generalStats" in history_storage:
-			if self.opp1_name in history_storage["generalStats"]:
-				fields = history_storage["generalStats"][self.opp1_name].keys()
-				if FOLD_PERCENT in fields:
-					self.foldPercentage[self.opp1_name] = history_storage["generalStats"][self.opp1_name][FOLD_PERCENT]
-				if PFWIN_PERCENT in fields:	
-					self.postFlopWinPct[self.opp1_name] = history_storage["generalStats"][self.opp1_name][PFWIN_PERCENT]
-				if VPIP_PERCENT in fields:	
-					self.vpipPercent[self.opp1_name] = history_storage["generalStats"][self.opp1_name][VPIP_PERCENT]
-				if VPIP_TO_PFR in fields:
-					self.vpipToPfr[self.opp1_name] = history_storage["generalStats"][self.opp1_name][VPIP_TO_PFR]
+		# for opponent_name in [self.opp1_name, self.opp2_name]:
+		# 	if opponent_name in history_storage:
+		fields = history_storage[opponent_name].keys()
+		if FOLD_PERCENT in fields:
+			self.foldPercentage[opponent_name] = history_storage[opponent_name][FOLD_PERCENT]
+		if PFWIN_PERCENT in fields:	
+			self.postFlopWinPct[opponent_name] = history_storage[opponent_name][PFWIN_PERCENT]
+		if VPIP_PERCENT in fields:	
+			self.vpipPercent[opponent_name] = history_storage[opponent_name][VPIP_PERCENT]
+		if VPIP_TO_PFR in fields:
+			self.vpipToPfr[opponent_name] = history_storage[opponent_name][VPIP_TO_PFR]
 
-			if self.opp2_name in history_storage["generalStats"]:
-				fields = history_storage["generalStats"][self.opp2_name].keys()
-				if FOLD_PERCENT in fields:
-					self.foldPercentage[self.opp2_name] = history_storage["generalStats"][self.opp2_name][FOLD_PERCENT]
-				if PFWIN_PERCENT in fields:		
-					self.postFlopWinPct[self.opp2_name] = history_storage["generalStats"][self.opp2_name][PFWIN_PERCENT]
-				if VPIP_PERCENT in fields:		
-					self.vpipPercent[self.opp2_name] = history_storage["generalStats"][self.opp2_name][VPIP_PERCENT]
-				if VPIP_TO_PFR in fields:
-					self.vpipToPfr[self.opp2_name] = history_storage["generalStats"][self.opp2_name][VPIP_TO_PFR]
+			# if self.opp2_name in history_storage:
+			# 	fields = history_storage[self.opp2_name].keys()
+			# 	if FOLD_PERCENT in fields:
+			# 		self.foldPercentage[self.opp2_name] = history_storage[self.opp2_name][FOLD_PERCENT]
+			# 	if PFWIN_PERCENT in fields:		
+			# 		self.postFlopWinPct[self.opp2_name] = history_storage[self.opp2_name][PFWIN_PERCENT]
+			# 	if VPIP_PERCENT in fields:		
+			# 		self.vpipPercent[self.opp2_name] = history_storage[self.opp2_name][VPIP_PERCENT]
+			# 	if VPIP_TO_PFR in fields:
+			# 		self.vpipToPfr[self.opp2_name] = history_storage[self.opp2_name][VPIP_TO_PFR]
 
 
 
@@ -322,7 +322,7 @@ class Statistician:
 
 
 		for act in self.actionHistory:
-			act_split = act.split(":")
+			act_split = act.split(":") 
 
 			if act_split[0] == POST:
 				if act_split[-1] != self.myName:
@@ -613,19 +613,23 @@ class Statistician:
 											VPIP_PERCENT  : self.vpipPercent[self.opp1_name],
 											VPIP_TO_PFR   : self.vpipToPfr[self.opp1_name],
 											PFWIN_PERCENT : self.postFlopWinPct[self.opp1_name]},
+
 						self.opp2_name : {FOLD_PERCENT    : self.foldPercentage[self.opp2_name], 
 											# AGGR_PERCENT  : self.aggressionPercent[self.opp2_name], 
 											VPIP_PERCENT  : self.vpipPercent[self.opp2_name],
-											VPIP_TO_PFR   : self.vpipToPfr[self.opp1_name],
+											VPIP_TO_PFR   : self.vpipToPfr[self.opp2_name],
 											PFWIN_PERCENT : self.postFlopWinPct[self.opp2_name]}}
 
 		# history_storage = {}
-		# history_storage["generalStats"] = generalStats
+		# history_storage = generalStats
 		# Writing back to history storage
-		if "generalStats" in history_storage:
-			history_storage["generalStats"] = dict(history_storage["generalStats"].items() + generalStats.items())
-		else:
-			history_storage["generalStats"] = generalStats
+		for opponent_name in [self.opp1_name, self.opp2_name]:
+			if opponent_name in history_storage:
+				history_storage[opponent_name] = dict(history_storage[opponent_name].items() + generalStats[opponent_name].items())
+			else:
+				history_storage[opponent_name] = generalStats[opponent_name]
+			print "END : " + str(history_storage)
+			socket.send("PUT " +    opponent_name + " " + str(history_storage[opponent_name]) + "\n")
 
 		# if "averageEquityTwo" in history_storage:
 		# 	history_storage["averageEquityTwo"] = dict(history_storage["averageEquityTwo"].items() + self.averageEquityTwo.items())
@@ -646,14 +650,10 @@ class Statistician:
 		# 	history_storage["minEquityThree"] = dict(history_storage["minEquityThree"].items() + self.minEquityThree.items())
 		# else:
 		# 	history_storage["minEquityThree"] = self.minEquityThree
-
-		print "END : " + str(history_storage["generalStats"])
 		# socket.send("PUT " + "averageEquityTwo "   + str(history_storage["averageEquityTwo"]) + "\n")
 		# socket.send("PUT " + "averageEquityThree " + str(history_storage["averageEquityThree"]) + "\n")
 		# socket.send("PUT " + "minEquityTwo "       + str(history_storage["minEquityTwo"]) + "\n")
 		# socket.send("PUT " + "minEquityThree "     + str(history_storage["minEquityThree"]) + "\n")
-		socket.send("RESET\n")
-		socket.send("PUT " + "generalStats "       + str(history_storage["generalStats"]) + "\n")
 		# print "######## DEBUGGING PREFLOP STATISTICS ########"
 		# print "Player Name: ", self.myName
 		# print "Names of opponent: ", self.opp1_name, self.opp2_name

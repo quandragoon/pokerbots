@@ -182,7 +182,7 @@ class Player:
         self.bigBlind               = 2
         self.lastRaiser             = None
         self.oppCheckedThisRound    = False
-
+        self.hasPlayed              = {}
         # boss-ass hands
         self.boss_class1            = ['AsAh', 'AsAd', 'AsAc', 'AhAs', 
                                        'AhAd', 'AhAc', 'AdAs', 'AdAh', 
@@ -271,13 +271,10 @@ class Player:
         # we load their statistics from the previous encounter
         # for this game. NOTE that Historian is just an instance of the Statistician/Historian class
         # that is not yet created. 
-        if self.opponent_1_name in self.history_storage:
-            self.hasPlayed_opponent_1 = True
-            # statistician.getOpponentStatistics(opponent_1_name, history_storage[opponent_1_name])
-
-        if self.opponent_2_name in self.history_storage:
-            self.hasPlayed_opponent_2 = True
-            #statistician.getOpponentStatistics(opponent_2_name, history_storage[opponent_2_name])
+        self.hasPlayed = {self.opponent_1_name: False, self.opponent_2_name: False}       
+        for opponent_name in [self.opponent_1_name, self.opponent_2_name]:
+            if opponent_name in self.history_storage:
+                self.hasPlayed[opponent_name] = True
 
 
 
@@ -300,7 +297,10 @@ class Player:
         if self.STATS == None:
             self.STATS = Statistician(self.my_name, self.opponent_1_name, self.opponent_2_name)
             self.STATS.getPrecomputedHashtables(self.equity_table_2, self.equity_table_3) 
-            self.STATS.loadDataFromHistoryStorage(self.history_storage)
+            for opponent_name in [self.opponent_1_name, self.opponent_2_name]:
+                if self.hasPlayed[opponent_name]:
+                    self.STATS.loadDataFromHistoryStorage(self.history_storage, opponent_name)
+            # self.STATS.loadDataFromHistoryStorage(self.history_storage)
             self.STATS.setBigBlind(self.bigBlind)
             print "===> STORAGE: " + str (self.history_storage)
 
