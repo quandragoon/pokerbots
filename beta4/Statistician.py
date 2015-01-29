@@ -52,6 +52,9 @@ LOOSE_THRESH = 0.3
 
 # Helper function
 
+def shortenDecimal (num):
+	return int((num * 100) + 0.5) / 100.0
+
 def calcEWMA (alpha, new_input, old_avg):
 	return alpha * new_input + (1 - alpha) * old_avg 
 
@@ -60,10 +63,10 @@ def classify_pre_flop_player (vpip, pfr, vpipPerc):
 	# print "RATIO : " + str(ratio)
 	# print "VPIP P: " + str(vpipPerc)
 	if vpipPerc > LOOSE_THRESH: # If loose
-		if ratio < 1.4:
+		if ratio < 1.3:
 			# Loose Aggressive
 			return TYPE_LA
-		if ratio > 3:
+		if ratio > 3.5:
 			# Loose Passive
 			return TYPE_LP
 	elif vpipPerc < TIGHT_THRESH: # If tight
@@ -132,6 +135,7 @@ class Statistician:
 
 
 		# Quan's code
+		self.bigBlind = 2
 		self.equity_table_2 = {}
 		self.equity_table_3 = {}
 		self.actionHistory = []
@@ -179,26 +183,26 @@ class Statistician:
 
 
 	def loadDataFromHistoryStorage(self, history_storage):
-		# min equity data
-		if "minEquityTwo" in history_storage and "minEquityThree" in history_storage:
-			if self.opp1_name in history_storage["minEquityTwo"]:
-				self.minEquityTwo[self.opp1_name] = history_storage["minEquityTwo"][self.opp1_name]
-			if self.opp1_name in history_storage["minEquityThree"]:
-				self.minEquityThree[self.opp1_name] = history_storage["minEquityThree"][self.opp1_name]
-			if self.opp2_name in history_storage["minEquityTwo"]:
-				self.minEquityTwo[self.opp2_name] = history_storage["minEquityTwo"][self.opp2_name]
-			if self.opp2_name in history_storage["minEquityThree"]:
-				self.minEquityThree[self.opp2_name] = history_storage["minEquityThree"][self.opp2_name]
+	# 	# min equity data
+	# 	if "minEquityTwo" in history_storage and "minEquityThree" in history_storage:
+	# 		if self.opp1_name in history_storage["minEquityTwo"]:
+	# 			self.minEquityTwo[self.opp1_name] = history_storage["minEquityTwo"][self.opp1_name]
+	# 		if self.opp1_name in history_storage["minEquityThree"]:
+	# 			self.minEquityThree[self.opp1_name] = history_storage["minEquityThree"][self.opp1_name]
+	# 		if self.opp2_name in history_storage["minEquityTwo"]:
+	# 			self.minEquityTwo[self.opp2_name] = history_storage["minEquityTwo"][self.opp2_name]
+	# 		if self.opp2_name in history_storage["minEquityThree"]:
+	# 			self.minEquityThree[self.opp2_name] = history_storage["minEquityThree"][self.opp2_name]
 
-			# avg equity data
-			if self.opp1_name in history_storage["averageEquityTwo"]:
-				self.averageEquityTwo[self.opp1_name] = history_storage["averageEquityTwo"][self.opp1_name]
-			if self.opp1_name in history_storage["averageEquityThree"]:
-				self.averageEquityThree[self.opp1_name] = history_storage["averageEquityThree"][self.opp1_name]
-			if self.opp2_name in history_storage["averageEquityTwo"]:
-				self.averageEquityTwo[self.opp2_name] = history_storage["averageEquityTwo"][self.opp2_name]
-			if self.opp2_name in history_storage["averageEquityThree"]:
-				self.averageEquityThree[self.opp2_name] = history_storage["averageEquityThree"][self.opp2_name]
+	# 		# avg equity data
+	# 		if self.opp1_name in history_storage["averageEquityTwo"]:
+	# 			self.averageEquityTwo[self.opp1_name] = history_storage["averageEquityTwo"][self.opp1_name]
+	# 		if self.opp1_name in history_storage["averageEquityThree"]:
+	# 			self.averageEquityThree[self.opp1_name] = history_storage["averageEquityThree"][self.opp1_name]
+	# 		if self.opp2_name in history_storage["averageEquityTwo"]:
+	# 			self.averageEquityTwo[self.opp2_name] = history_storage["averageEquityTwo"][self.opp2_name]
+	# 		if self.opp2_name in history_storage["averageEquityThree"]:
+	# 			self.averageEquityThree[self.opp2_name] = history_storage["averageEquityThree"][self.opp2_name]
 
 		# general stats
 		if "generalStats" in history_storage:
@@ -250,6 +254,8 @@ class Statistician:
 				self.minEquityThree[name][numBc] = min(eq, self.minEquityThree[name][numBc])
 				self.averageEquityThree[name][numBc] = calcEWMA (self.alpha, eq, self.averageEquityThree[name][numBc])
 
+	def setBigBlind (self, bb):
+		self.bigBlind = bb
 
 	def updateFoldBeta (self, name):
 		self.foldBeta[name] = min(self.postFlopCount[name] * self.beta_inc, self.beta_max)
@@ -389,7 +395,7 @@ class Statistician:
 				if act_split[-1] != self.myName: 
 					self.callCount[act_split[-1]] += 1
 					if boardState == PREFLOP:
-						if self.blindBoolean[act_split[-1]] == False or act_split[1] > 2:
+						if self.blindBoolean[act_split[-1]] == False or act_split[1] > self.bigBlind:
 							if self.vpipBoolean[act_split[-1]] == False:
 								self.vpipCount[act_split[-1]] += 1
 								self.vpipBoolean[act_split[-1]] = True
@@ -419,10 +425,9 @@ class Statistician:
 						self.nhpBoolean[act_split[-1]] = True
 
 		# Compute equity
-		for name in [self.opp1_name, self.opp2_name]:
-			# if len(self.numActivePlayersBeforeFold[name]) == 4 and self.numActivePlayersBeforeFold[name][-1] != FOLDED:
-			if self.handDict[name] != "":
-				self.calculateEquityStat(name, self.handDict[name], self.numActivePlayersBeforeFold[name], received_packet['boardcards'], monte_carlo_iter)
+		# for name in [self.opp1_name, self.opp2_name]:
+		# 	if self.handDict[name] != "":
+		# 		self.calculateEquityStat(name, self.handDict[name], self.numActivePlayersBeforeFold[name], received_packet['boardcards'], monte_carlo_iter)
 
 
 		# print "====> SHITs  : " + repr(self.numActivePlayersBeforeFold)
@@ -591,61 +596,63 @@ class Statistician:
 
 		# calculate new fold percentages and post flop win percentages
 		for name in [self.opp1_name, self.opp2_name]:
-			self.foldPercentage[name] = self.getFoldPercent(name)
-			self.postFlopWinPct[name] = self.getPostFlopWinPct(name)
-			self.vpipPercent[name]    = self.getVPIPPercent(name)
-			self.vpipToPfr[name]      = self.getVPIPtoPFR(name)
+			self.foldPercentage[name] = shortenDecimal(self.getFoldPercent(name))
+			self.postFlopWinPct[name] = shortenDecimal(self.getPostFlopWinPct(name))
+			self.vpipPercent[name]    = shortenDecimal(self.getVPIPPercent(name))
+			self.vpipToPfr[name]      = self.getVPIPtoPFR(name) # this shit is a tuple
 
 
 
 		# self.getPFR()
 		# self.getPFRFold()
-		self.getAggressionPercent()
+		# self.getAggressionPercent()
 		# self.getVPIPPercent()
 
 		generalStats = {self.opp1_name : {FOLD_PERCENT    : self.foldPercentage[self.opp1_name], 
-											AGGR_PERCENT  : self.aggressionPercent[self.opp1_name], 
+											# AGGR_PERCENT  : self.aggressionPercent[self.opp1_name], 
 											VPIP_PERCENT  : self.vpipPercent[self.opp1_name],
 											VPIP_TO_PFR   : self.vpipToPfr[self.opp1_name],
 											PFWIN_PERCENT : self.postFlopWinPct[self.opp1_name]},
 						self.opp2_name : {FOLD_PERCENT    : self.foldPercentage[self.opp2_name], 
-											AGGR_PERCENT  : self.aggressionPercent[self.opp2_name], 
+											# AGGR_PERCENT  : self.aggressionPercent[self.opp2_name], 
 											VPIP_PERCENT  : self.vpipPercent[self.opp2_name],
 											VPIP_TO_PFR   : self.vpipToPfr[self.opp1_name],
 											PFWIN_PERCENT : self.postFlopWinPct[self.opp2_name]}}
 
-
+		# history_storage = {}
+		# history_storage["generalStats"] = generalStats
 		# Writing back to history storage
 		if "generalStats" in history_storage:
 			history_storage["generalStats"] = dict(history_storage["generalStats"].items() + generalStats.items())
 		else:
 			history_storage["generalStats"] = generalStats
 
-		if "averageEquityTwo" in history_storage:
-			history_storage["averageEquityTwo"] = dict(history_storage["averageEquityTwo"].items() + self.averageEquityTwo.items())
-		else:
-			history_storage["averageEquityTwo"] = self.averageEquityTwo
+		# if "averageEquityTwo" in history_storage:
+		# 	history_storage["averageEquityTwo"] = dict(history_storage["averageEquityTwo"].items() + self.averageEquityTwo.items())
+		# else:
+		# 	history_storage["averageEquityTwo"] = self.averageEquityTwo
 
-		if "averageEquityThree" in history_storage:
-			history_storage["averageEquityThree"] = dict(history_storage["averageEquityThree"].items() + self.averageEquityThree.items())
-		else:
-			history_storage["averageEquityThree"] = self.averageEquityThree
+		# if "averageEquityThree" in history_storage:
+		# 	history_storage["averageEquityThree"] = dict(history_storage["averageEquityThree"].items() + self.averageEquityThree.items())
+		# else:
+		# 	history_storage["averageEquityThree"] = self.averageEquityThree
 
-		if "minEquityTwo" in history_storage:
-			history_storage["minEquityTwo"] = dict(history_storage["minEquityTwo"].items() + self.minEquityTwo.items())
-		else:
-			history_storage["minEquityTwo"] = self.minEquityTwo
+		# if "minEquityTwo" in history_storage:
+		# 	history_storage["minEquityTwo"] = dict(history_storage["minEquityTwo"].items() + self.minEquityTwo.items())
+		# else:
+		# 	history_storage["minEquityTwo"] = self.minEquityTwo
 
-		if "minEquityThree" in history_storage:
-			history_storage["minEquityThree"] = dict(history_storage["minEquityThree"].items() + self.minEquityThree.items())
-		else:
-			history_storage["minEquityThree"] = self.minEquityThree
+		# if "minEquityThree" in history_storage:
+		# 	history_storage["minEquityThree"] = dict(history_storage["minEquityThree"].items() + self.minEquityThree.items())
+		# else:
+		# 	history_storage["minEquityThree"] = self.minEquityThree
 
-
-		socket.send("PUT " + "averageEquityTwo "   + str(history_storage["averageEquityTwo"]) + "\n")
-		socket.send("PUT " + "averageEquityThree " + str(history_storage["averageEquityThree"]) + "\n")
-		socket.send("PUT " + "minEquityTwo "       + str(history_storage["minEquityTwo"]) + "\n")
-		socket.send("PUT " + "minEquityThree "     + str(history_storage["minEquityThree"]) + "\n")
+		print "END : " + str(history_storage["generalStats"])
+		# socket.send("PUT " + "averageEquityTwo "   + str(history_storage["averageEquityTwo"]) + "\n")
+		# socket.send("PUT " + "averageEquityThree " + str(history_storage["averageEquityThree"]) + "\n")
+		# socket.send("PUT " + "minEquityTwo "       + str(history_storage["minEquityTwo"]) + "\n")
+		# socket.send("PUT " + "minEquityThree "     + str(history_storage["minEquityThree"]) + "\n")
+		socket.send("RESET\n")
 		socket.send("PUT " + "generalStats "       + str(history_storage["generalStats"]) + "\n")
 		# print "######## DEBUGGING PREFLOP STATISTICS ########"
 		# print "Player Name: ", self.myName

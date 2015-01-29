@@ -523,8 +523,8 @@ class Player:
                 return CHECK
             return FOLD
 
-        # elif equity > self.raise_thres and (self.is_new_round or do_reraise): 
-        elif equity > self.raise_thres:
+        elif equity > self.raise_thres and (self.is_new_round or do_reraise): 
+        # elif equity > self.raise_thres:
             winning_factor = ((equity - self.fold_thres) / (1 - self.fold_thres))**POWER
             if BET in avail_actions:
                 amount = self.bet_handler(winning_factor)
