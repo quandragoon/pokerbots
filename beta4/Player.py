@@ -63,6 +63,7 @@ FOLD_PERCENT = 9
 AGGR_PERCENT = 8
 
 MONTE_CARLO_ITER = 30000
+MAX_ITER         = 120000
 DELTA_ITER       = 5000
 # BITCH_FACTOR_TABLE = {0 : 0.75, 3 : 0.8, 4 : 0.9, 5 : 1}
 TWO_IN_BITCH_FACTOR_TABLE   = {0 : 0.99, 3 : 1, 4 : 1.1,  5 : 1.2}
@@ -263,8 +264,8 @@ class Player:
         self.opp_dict[self.opponent_2_name] = Opponent(self.opponent_2_name)
 
         self.time_bank       = float(received_packet['timeBank'])
-        self.time_low_thres  = 0.3 * self.time_bank
-        self.time_per_hand   = 1.5 * self.time_bank / received_packet['num_hands']  
+        self.time_low_thres  = 0.05 * self.time_bank
+        self.time_per_hand   = self.time_bank / received_packet['num_hands']  
 
 
         # If we have already played the opponent before, 
@@ -312,12 +313,12 @@ class Player:
         # adjust iterations
         new_time_bank = float(received_packet['timeBank'])
         if new_time_bank < self.time_low_thres:
-            self.time_per_hand = self.time_per_hand / 4
+            self.time_per_hand = self.time_per_hand / 2
         delta_time = self.time_bank - new_time_bank 
         if delta_time > self.time_per_hand:
             self.monte_carlo_iter = max(self.monte_carlo_iter - DELTA_ITER, DELTA_ITER)
         else:
-            self.monte_carlo_iter = self.monte_carlo_iter + DELTA_ITER
+            self.monte_carlo_iter = min(self.monte_carlo_iter + DELTA_ITER, MAX_ITER)
 
         self.time_bank = new_time_bank
 
@@ -684,7 +685,7 @@ class Player:
 
 
 
-        do_reraise = random.random() < self.opp_fold_thres / 2
+        do_reraise = random.random() < self.opp_fold_thres
 
         # print 'FOLD T: ' + str(self.opp_fold_thres) 
         # print 'EQUITY: ' + str(equity)
@@ -777,7 +778,7 @@ class Player:
                 if self.oppCheckedThisRound:
                     random_nig = random.random()
                     if random_nig < self.opp_fold_thres:
-                        print "MINBET: " + str(self.minBet)
+                        # print "MINBET: " + str(self.minBet)
                         return BET + ":" + str(self.minBet)
             if CHECK in avail_actions:
                 return CHECK
@@ -844,7 +845,7 @@ class Player:
             if self.oppCheckedThisRound:
                 random_nig = random.random()
                 if random_nig < self.opp_fold_thres:
-                    print "MINBET: " + str(self.minBet * 4)
+                    # print "MINBET: " + str(self.minBet * 4)
                     return BET + ":" + str(self.minBet * 4)
 
         if CALL in avail_actions:
