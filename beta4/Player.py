@@ -872,32 +872,33 @@ class Player:
 
         if CALL in avail_actions:
             # TODO: do preflop logic here
-            # if self.isPreflop:
-            #     if self.handPosition == BUTTON or (self.handPosition == SB and self.num_active_players == 2):
-            #         if self.opp_dict[self.guy_active].playerType == TYPE_LA:
-            #             # nigga will handle raising
-            #             return do_call()
-            #         if self.potsize > 5 * self.bigBlind:
-            #             return do_call_preflop()
-            #         else:
-            #             if RAISE in avail_actions:
-            #                 return do_raise_preflop()
-            #             else:
-            #                 return do_call_preflop()
-            #     elif self.handPosition == SB:
-            #         if self.call_amount == self.bigBlind:
-            #             return do_call_preflop()
-            #         else: # someone raised
-            #             return FOLD
-            #     elif self.handPosition == BB:
-            #         # someone raised
-            #         if self.potsize <= 3 * self.bigBlind:
-            #             return do_call_preflop()
-            #         return FOLD
+            if self.isPreflop:
+                if self.handPosition == BUTTON or (self.handPosition == SB and self.num_active_players == 2):
+                    if self.opp_dict[self.guy_active].playerType == TYPE_LA:
+                        # nigga will handle raising
+                        return do_call()
+                    if self.potsize > 5 * self.bigBlind:
+                        return do_call_preflop()
+                    else:
+                        if RAISE in avail_actions:
+                            return do_raise_preflop()
+                        else:
+                            return do_call_preflop()
+                elif self.handPosition == SB:
+                    if self.call_amount == self.bigBlind:
+                        return do_call()
+                    else: # someone raised
+                        return FOLD
+                elif self.handPosition == BB:
+                    # someone raised
+                    if self.potsize <= 3 * self.bigBlind:
+                        return do_call_preflop()
+                    return FOLD
 
-            # else:
-            #     return do_call ()
-            return do_call()
+            else:
+                return do_call ()
+
+            # return do_call()
 
         # if CHECK in avail_actions:
         #     random_nig = random.random()
