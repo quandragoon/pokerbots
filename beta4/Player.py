@@ -739,21 +739,27 @@ class Player:
                 if self.lastRaiser in [TYPE_STA] and self.my_stacksize > SUFFICIENT_CHIPS:
                     return CALL + ":" + str(self.call_amount)
                 # raise a lot
+                self.highestRaiseAmtThisRnd = self.maxRaise
                 return RAISE + ":" + str(self.maxRaise)
             elif self.my_hand in self.boss_class2:
                 if self.num_active_players == 3 and self.one_folded == False:
                     if (self.opp_dict[self.opponent_1_name].playerType not in [TYPE_STA, TYPE_TA, TYPE_LP]) and \
                         (self.opp_dict[self.opponent_2_name].playerType not in [TYPE_STA, TYPE_TA, TYPE_LP]):
                         # raise a lot
+                        self.highestRaiseAmtThisRnd = self.maxRaise
                         return RAISE + ":" + str(self.maxRaise)
                     else:
+                        self.highestRaiseAmtThisRnd = self.maxRaise
                         return RAISE + ":" + str(self.minRaise)
                 elif self.opp_dict[self.guy_active].playerType not in [TYPE_STA, TYPE_TA, TYPE_LP]:
                     # raise a lot
+                    self.highestRaiseAmtThisRnd = self.maxRaise
                     return RAISE + ":" + str(self.maxRaise)
                 else:
+                    self.highestRaiseAmtThisRnd = self.minRaise
                     return RAISE + ":" + str(self.minRaise)
             # bet a little in general
+            self.highestRaiseAmtThisRnd = self.minRaise
             return RAISE + ":" + str(self.minRaise)
 
         def do_call_preflop ():
@@ -782,6 +788,7 @@ class Player:
                         if (self.fold_thres - equity) < TOLERANCE_FOR_LA:
                             if CALL in avail_actions:
                                 if self.call_amount == self.bigBlind and RAISE in avail_actions:
+                                    self.highestRaiseAmtThisRnd = self.minRaise
                                     return RAISE + ":" + str(self.minRaise)
                 return FOLD
 
@@ -790,6 +797,7 @@ class Player:
                     random_nig = random.random()
                     if random_nig < self.opp_fold_thres:
                         # print "MINBET: " + str(self.minBet)
+                        self.highestRaiseAmtThisRnd = self.minBet
                         return BET + ":" + str(self.minBet)
             if CHECK in avail_actions:
                 return CHECK
@@ -856,11 +864,40 @@ class Player:
                 random_nig = random.random()
                 if random_nig < self.opp_fold_thres:
                     # print "MINBET: " + str(self.minBet * 4)
+                    self.highestRaiseAmtThisRnd = self.minBet * 4
                     return BET + ":" + str(self.minBet * 4)
+
+
+
 
         if CALL in avail_actions:
             # TODO: do preflop logic here
-            return do_call ()
+            # if self.isPreflop:
+            #     if self.handPosition == BUTTON or (self.handPosition == SB and self.num_active_players == 2):
+            #         if self.opp_dict[self.guy_active].playerType == TYPE_LA:
+            #             # nigga will handle raising
+            #             return do_call()
+            #         if self.potsize > 5 * self.bigBlind:
+            #             return do_call_preflop()
+            #         else:
+            #             if RAISE in avail_actions:
+            #                 return do_raise_preflop()
+            #             else:
+            #                 return do_call_preflop()
+            #     elif self.handPosition == SB:
+            #         if self.call_amount == self.bigBlind:
+            #             return do_call_preflop()
+            #         else: # someone raised
+            #             return FOLD
+            #     elif self.handPosition == BB:
+            #         # someone raised
+            #         if self.potsize <= 3 * self.bigBlind:
+            #             return do_call_preflop()
+            #         return FOLD
+
+            # else:
+            #     return do_call ()
+            return do_call()
 
         # if CHECK in avail_actions:
         #     random_nig = random.random()
