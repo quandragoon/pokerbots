@@ -48,10 +48,10 @@ LOTS_OF_CHIPS    = 400
 SUFFICIENT_CHIPS = 50
 
 # equity threshold
-THREE_FOLD_THRES_TABLE  = {0 : 0.38, 3 : 0.25, 4 : 0.25, 5 : 0.4}
+THREE_FOLD_THRES_TABLE  = {0 : 0.35, 3 : 0.25, 4 : 0.25, 5 : 0.4}
 THREE_RAISE_THRES_TABLE = {0 : 0.45, 3 : 0.7,  4 : 0.7,  5 : 0.7}
-TWO_FOLD_THRES_TABLE    = {0 : 0.53, 3 : 0.35, 4 : 0.3,  5 : 0.5}
-TWO_RAISE_THRES_TABLE   = {0 : 0.65, 3 : 0.75, 4 : 0.75, 5 : 0.78}
+TWO_FOLD_THRES_TABLE    = {0 : 0.5, 3 : 0.35, 4 : 0.3,  5 : 0.5}
+TWO_RAISE_THRES_TABLE   = {0 : 0.575,  3 : 0.75, 4 : 0.75, 5 : 0.78}
 
 BET_SMALL_LIKELIHOOD = {0 : 150, 3 : 130, 4 : 100, 5 : 80}
 
@@ -304,7 +304,7 @@ class Player:
                     self.STATS.loadDataFromHistoryStorage(self.history_storage, opponent_name)
             # self.STATS.loadDataFromHistoryStorage(self.history_storage)
             self.STATS.setBigBlind(self.bigBlind)
-            print "===> STORAGE: " + str (self.history_storage)
+            # print "===> STORAGE: " + str (self.history_storage)
 
         self.STATS.getNumActivePlayers(self.num_active_players)
         ###############################################################################################
@@ -314,7 +314,7 @@ class Player:
         # adjust iterations
         new_time_bank = float(received_packet['timeBank'])
         if new_time_bank < self.time_low_thres and self.already_set_new_time == False:
-            self.time_per_hand = self.time_per_hand / 2
+            self.time_per_hand = 0.8 * self.time_per_hand
             self.already_set_new_time = True
         delta_time = self.time_bank - new_time_bank 
         if delta_time > self.time_per_hand:
@@ -535,14 +535,14 @@ class Player:
         lhs = fold_ew * bitch_factor
         rhs = equity*call_win_ew + (1-equity)*call_lose_ew
 
-        print 'HAND ID : ' + str(self.hand_id)
-        print 'MY HAND : ' + self.my_hand
-        print 'MY STACK: ' + str(self.my_stacksize)
-        print 'POT     : ' + str(self.potsize)
-        print 'EQUITY  : ' + str(equity)
-        print 'FOLD EW : ' + str(fold_ew) 
-        print "CALL EW : " + str(rhs)
-        print 'BITCH F : ' + str(bitch_factor)
+        # print 'HAND ID : ' + str(self.hand_id)
+        # print 'MY HAND : ' + self.my_hand
+        # print 'MY STACK: ' + str(self.my_stacksize)
+        # print 'POT     : ' + str(self.potsize)
+        # print 'EQUITY  : ' + str(equity)
+        # print 'FOLD EW : ' + str(fold_ew) 
+        # print "CALL EW : " + str(rhs)
+        # print 'BITCH F : ' + str(bitch_factor)
         if lhs < rhs:
             return True
         return False
@@ -599,7 +599,7 @@ class Player:
                 return True
 
             raiseToMaxRaise = float(self.inc_call_amount) / (self.potsize - self.call_amount + self.highestRaiseAmtThisRnd + 0.01)
-            print "AGGRESSIVENESS : " + str(raiseToMaxRaise)
+            # print "AGGRESSIVENESS : " + str(raiseToMaxRaise)
 
             if self.num_active_players == 2:
                 return True
@@ -607,26 +607,26 @@ class Player:
             if self.inc_call_amount >= 6 * self.bigBlind:
                 if raiseToMaxRaise > 0.75: # very aggressive
                     if self.opp_dict[self.lastRaiser].playerType in [TYPE_TA, TYPE_STA] and equity < 0.96:
-                        print "FOLDED 1 BECAUSE PLAYER TYPE: " + self.opp_dict[self.lastRaiser].playerType 
+                        # print "FOLDED 1 BECAUSE PLAYER TYPE: " + self.opp_dict[self.lastRaiser].playerType 
                         return False
                     elif self.opp_dict[self.lastRaiser].playerType != TYPE_LA and equity < 1.12 * self.raise_thres:
-                        print "FOLDED 2 BECAUSE PLAYER TYPE: " + self.opp_dict[self.lastRaiser].playerType 
+                        # print "FOLDED 2 BECAUSE PLAYER TYPE: " + self.opp_dict[self.lastRaiser].playerType 
                         return False
                     elif equity < self.raise_thres:
                         return False
-                elif raiseToMaxRaise > 0.45: # medium aggressive
+                elif raiseToMaxRaise > 0.5: # medium aggressive
                     if self.opp_dict[self.lastRaiser].playerType in [TYPE_TA, TYPE_STA] and equity < 0.92:
-                        print "FOLDED 3 BECAUSE PLAYER TYPE: " + self.opp_dict[self.lastRaiser].playerType 
+                        # print "FOLDED 3 BECAUSE PLAYER TYPE: " + self.opp_dict[self.lastRaiser].playerType 
                         return False
                     elif self.opp_dict[self.lastRaiser].playerType != TYPE_LA and equity < 1.12 * self.raise_thres:
-                        print "FOLDED 4 BECAUSE PLAYER TYPE: " + self.opp_dict[self.lastRaiser].playerType 
+                        # print "FOLDED 4 BECAUSE PLAYER TYPE: " + self.opp_dict[self.lastRaiser].playerType 
                         return False
                     elif equity < self.raise_thres:
                         return False
-                elif raiseToMaxRaise > 0.3: # mildly aggressive
+                elif raiseToMaxRaise > 0.35: # mildly aggressive
                     if self.opp_dict[self.lastRaiser].playerType in [TYPE_TA, TYPE_STA]:
                         if equity < 1.12 * self.raise_thres:
-                            print "FOLDED 5 BECAUSE PLAYER TYPE: " + self.opp_dict[self.lastRaiser].playerType 
+                            # print "FOLDED 5 BECAUSE PLAYER TYPE: " + self.opp_dict[self.lastRaiser].playerType 
                             return False                    
                     elif self.opp_dict[self.lastRaiser].playerType != TYPE_LA:
                         if equity < self.raise_thres:

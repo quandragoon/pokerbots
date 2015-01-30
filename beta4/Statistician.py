@@ -47,7 +47,7 @@ TYPE_NEU = "Neutral"
 
 # player type thresh
 TIGHT_THRESH =  0.2
-LOOSE_THRESH = 0.5
+LOOSE_THRESH = 0.4
 
 
 
