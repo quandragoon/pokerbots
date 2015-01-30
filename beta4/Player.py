@@ -183,6 +183,7 @@ class Player:
         self.bigBlind               = 2
         self.lastRaiser             = None
         self.oppCheckedThisRound    = False
+        self.already_set_new_time   = False
         self.hasPlayed              = {}
         # boss-ass hands
         self.boss_class1            = ['AsAh', 'AsAd', 'AsAc', 'AhAs', 
@@ -312,8 +313,9 @@ class Player:
 
         # adjust iterations
         new_time_bank = float(received_packet['timeBank'])
-        if new_time_bank < self.time_low_thres:
+        if new_time_bank < self.time_low_thres and self.already_set_new_time == False:
             self.time_per_hand = self.time_per_hand / 2
+            self.already_set_new_time = True
         delta_time = self.time_bank - new_time_bank 
         if delta_time > self.time_per_hand:
             self.monte_carlo_iter = max(self.monte_carlo_iter - DELTA_ITER, DELTA_ITER)
@@ -604,23 +606,31 @@ class Player:
 
             if self.inc_call_amount >= 6 * self.bigBlind:
                 if raiseToMaxRaise > 0.75: # very aggressive
-                    if self.opp_dict[self.lastRaiser].playerType != TYPE_LA and equity < 0.97:
+                    if self.opp_dict[self.lastRaiser].playerType in [TYPE_TA, TYPE_STA] and equity < 0.96:
                         print "FOLDED 1 BECAUSE PLAYER TYPE: " + self.opp_dict[self.lastRaiser].playerType 
                         return False
-                elif raiseToMaxRaise > 0.45: # medium aggressive
-                    if self.opp_dict[self.lastRaiser].playerType in [TYPE_TA, TYPE_STA] and equity < 0.94:
+                    elif self.opp_dict[self.lastRaiser].playerType != TYPE_LA and equity < 1.12 * self.raise_thres:
                         print "FOLDED 2 BECAUSE PLAYER TYPE: " + self.opp_dict[self.lastRaiser].playerType 
                         return False
-                    elif self.opp_dict[self.lastRaiser].playerType != TYPE_LA and equity < 1.15 * self.raise_thres:
+                    elif equity < self.raise_thres:
+                        return False
+                elif raiseToMaxRaise > 0.45: # medium aggressive
+                    if self.opp_dict[self.lastRaiser].playerType in [TYPE_TA, TYPE_STA] and equity < 0.92:
                         print "FOLDED 3 BECAUSE PLAYER TYPE: " + self.opp_dict[self.lastRaiser].playerType 
+                        return False
+                    elif self.opp_dict[self.lastRaiser].playerType != TYPE_LA and equity < 1.12 * self.raise_thres:
+                        print "FOLDED 4 BECAUSE PLAYER TYPE: " + self.opp_dict[self.lastRaiser].playerType 
                         return False
                     elif equity < self.raise_thres:
                         return False
                 elif raiseToMaxRaise > 0.3: # mildly aggressive
-                    if self.opp_dict[self.lastRaiser].playerType in [TYPE_TA, TYPE_STA, TYPE_LP]:
-                        if equity < 1.15 * self.raise_thres:
-                            print "FOLDED 4 BECAUSE PLAYER TYPE: " + self.opp_dict[self.lastRaiser].playerType 
+                    if self.opp_dict[self.lastRaiser].playerType in [TYPE_TA, TYPE_STA]:
+                        if equity < 1.12 * self.raise_thres:
+                            print "FOLDED 5 BECAUSE PLAYER TYPE: " + self.opp_dict[self.lastRaiser].playerType 
                             return False                    
+                    elif self.opp_dict[self.lastRaiser].playerType != TYPE_LA:
+                        if equity < self.raise_thres:
+                            return False
 
 
 
@@ -773,6 +783,7 @@ class Player:
                             if CALL in avail_actions:
                                 if self.call_amount == self.bigBlind and RAISE in avail_actions:
                                     return RAISE + ":" + str(self.minRaise)
+                return FOLD
 
             if BET in avail_actions and self.minBet <= self.bigBlind:
                 if self.oppCheckedThisRound:
@@ -793,7 +804,6 @@ class Player:
 
         # elif equity > self.raise_thres and (self.is_new_round or do_reraise): 
         elif equity > self.raise_thres:
-            "$$$ IN BET"
             if self.isPreflop: # fun time!
                 if self.handPosition == BUTTON:
                     if self.opp_dict[self.opponent_1_name].playerType == TYPE_LA or self.opp_dict[self.opponent_2_name].playerType == TYPE_LA:

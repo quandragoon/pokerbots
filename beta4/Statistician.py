@@ -47,7 +47,7 @@ TYPE_NEU = "Neutral"
 
 # player type thresh
 TIGHT_THRESH =  0.2
-LOOSE_THRESH = 0.3
+LOOSE_THRESH = 0.5
 
 
 
@@ -154,16 +154,16 @@ class Statistician:
 		# things currently used
 		self.foldCount      = {self.opp1_name : 0, self.opp2_name : 0} # number of folds POSTFLOP only!
 		self.foldCountpFr   = {self.opp1_name : 0, self.opp2_name : 0}
-		self.foldPercentage = {self.opp1_name : 0.5, self.opp2_name : 0.5}
+		self.foldPercentage = {self.opp1_name : 0.3, self.opp2_name : 0.3}
 		self.numHandsPlayed = {self.opp1_name : 0, self.opp2_name : 0} # total number of hands
 
 		self.postFlopWinCount = {self.opp1_name : 0, self.opp2_name : 0}
 		self.postFlopCount    = {self.opp1_name : 0, self.opp2_name : 0} # total number of hands played past preflop
-		self.postFlopWinPct   = {self.opp1_name : 0.5, self.opp2_name : 0.5}
+		self.postFlopWinPct   = {self.opp1_name : 0.3, self.opp2_name : 0.3}
 
 		self.pfrCount    = {self.opp1_name : 0, self.opp2_name : 0}
 		self.vpipCount   = {self.opp1_name : 0, self.opp2_name : 0}
-		self.vpipPercent = {self.opp1_name : 0.3, self.opp2_name : 0.3}
+		self.vpipPercent = {self.opp1_name : 0.4, self.opp2_name : 0.4}
 		self.vpipToPfr   = {self.opp1_name : (2,1), self.opp2_name : (2,1)}
 
 		self.vpipBoolean  = {self.opp1_name: False, self.opp2_name: False}
